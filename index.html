@@ -110,16 +110,23 @@ details.quiz{
 }
 details.quiz>summary{
   cursor:pointer;font-weight:700;font-size:15px;list-style:none;
-  display:flex;gap:9px;align-items:baseline;
+  position:relative;padding-right:62px;
 }
 details.quiz>summary::-webkit-details-marker{display:none}
-details.quiz>summary::before{content:"▸";color:var(--accent2);font-size:13px;flex:0 0 auto}
+details.quiz>summary::before{content:"▸";color:var(--accent2);font-size:13px;margin-right:8px}
 details.quiz[open]>summary::before{content:"▾"}
 details.quiz>summary::after{
   content:"answer";font-family:var(--mono);font-size:10px;letter-spacing:.1em;text-transform:uppercase;
-  color:var(--muted);margin-left:auto;flex:0 0 auto;border:1px solid var(--rule);padding:1px 6px;border-radius:20px;
+  color:var(--muted);border:1px solid var(--rule);padding:1px 6px;border-radius:20px;
+  position:absolute;right:0;top:1px;
 }
 details.quiz[open]>summary::after{content:"hide"}
+details.quiz>summary .cb{
+  display:block;white-space:pre;overflow-x:auto;font-weight:400;
+  font-family:var(--mono);font-size:13px;line-height:1.55;
+  background:var(--codebg);border:1px solid var(--rule);border-radius:6px;
+  padding:10px 12px;margin:9px 0 2px;
+}
 details.quiz .ans{margin-top:11px;padding-top:11px;border-top:1px dashed var(--rule);font-size:15px}
 details.quiz .ans p:last-child,details.quiz .ans ul:last-child,details.quiz .ans pre:last-child{margin-bottom:0}
 .predict{
@@ -1226,7 +1233,12 @@ def dfs(start, graph):
 <p>Python's sort is <strong>stable</strong> (equal elements keep their input order — so you can sort by secondary key first, then primary), and <strong>adaptive</strong> (already-sorted input is O(n), not O(n log n)). Both can be exploited. Meanwhile <code>sorted([1, "a"])</code> raises <code>TypeError</code> in Python 3, and sorting a list of dicts or custom objects needs an explicit <code>key=</code> — <code>sorted(objs)</code> won't guess.</p>
 
 <details class="quiz">
-  <summary>Code review: this function is meant to find duplicates in a list of 500,000 order IDs. Name every problem you can see.<br><code>def dupes(ids):<br>&nbsp;&nbsp;&nbsp;&nbsp;out = []<br>&nbsp;&nbsp;&nbsp;&nbsp;for i in ids:<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;if ids.count(i) &gt; 1 and i not in out:<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;out.append(i)<br>&nbsp;&nbsp;&nbsp;&nbsp;return out</code></summary>
+  <summary>Code review: this function is meant to find duplicates in a list of 500,000 order IDs. Name every problem you can see.<span class="cb">def dupes(ids):
+    out = []
+    for i in ids:
+        if ids.count(i) &gt; 1 and i not in out:
+            out.append(i)
+    return out</span></summary>
   <div class="ans">
     <p><strong>1. <code>ids.count(i)</code> scans the entire list — inside a loop over the entire list.</strong> That's 500,000 × 500,000 = 2.5×10<sup>11</sup> operations. At 10<sup>7</sup> ops/sec that's roughly <strong>seven hours</strong>. On the developer's 100-item test file it finished instantly.</p>
     <p><strong>2. <code>i not in out</code> is a second linear scan</strong> — cheaper because <code>out</code> is small, but it's the same mistake again and it would dominate if most IDs were duplicated.</p>
