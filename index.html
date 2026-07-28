@@ -29,14 +29,15 @@ body{
   -webkit-font-smoothing:antialiased;
 }
 .wrap{max-width:var(--maxw);margin:0 auto;padding:40px 20px 90px}
-header{border-bottom:1px solid var(--rule);padding-bottom:22px;margin-bottom:30px}
-h1{font-size:clamp(27px,5vw,33px);line-height:1.15;margin:0 0 12px;letter-spacing:-.02em}
-.sub{color:var(--muted);font-size:1.12rem;margin:0}
+header{border-bottom:1px solid var(--rule);padding-bottom:24px;margin-bottom:32px}
+.kicker{text-transform:uppercase;letter-spacing:.14em;font-size:.75rem;color:var(--accent);font-weight:700;margin:0 0 12px}
+h1{font-size:clamp(28px,5.4vw,34px);line-height:1.14;margin:0 0 14px;letter-spacing:-.02em}
+.sub{color:var(--muted);font-size:1.12rem;margin:0;line-height:1.55}
 h2{
-  font-size:1.5rem;line-height:1.25;margin:52px 0 12px;letter-spacing:-.01em;
-  padding-top:16px;border-top:1px solid var(--rule);scroll-margin-top:20px;
+  font-size:1.55rem;line-height:1.2;margin:56px 0 14px;letter-spacing:-.015em;
+  scroll-margin-top:20px;
 }
-h2 .num{color:var(--accent);font-family:var(--mono);font-size:.6em;margin-right:.5em;vertical-align:.14em;font-weight:700}
+h2 .num{color:var(--accent);font-weight:700;margin-right:.4em}
 h3{font-size:1.16rem;margin:28px 0 8px;letter-spacing:-.005em}
 h4{font-size:.82rem;margin:20px 0 6px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted)}
 p{margin:12px 0}
@@ -162,7 +163,8 @@ ol.smell li::before{
   color:var(--muted);white-space:nowrap;
 }
 .recall{border:1px solid var(--rule);border-radius:14px;padding:18px 20px 8px;background:var(--panel-2)}
-.toc{background:var(--panel);border:1px solid var(--rule);border-radius:14px;padding:16px 20px 18px;margin-bottom:10px}
+.toc{background:var(--panel);border:1px solid var(--rule);border-radius:14px;padding:18px 20px;margin-bottom:10px}
+.toc>strong{display:block;font-size:.78rem;text-transform:uppercase;letter-spacing:.1em;color:var(--muted);margin-bottom:12px;font-weight:700}
 .toc ol{margin:0;padding-left:22px;font-size:.95rem;columns:2;column-gap:28px}
 .toc li{margin-bottom:6px;break-inside:avoid}
 footer{margin-top:56px;padding-top:22px;border-top:1px solid var(--rule);color:var(--muted);font-size:.85rem}
@@ -179,11 +181,13 @@ footer{margin-top:56px;padding-top:22px;border-top:1px solid var(--rule);color:v
 <div class="wrap">
 
 <header>
+  <p class="kicker">A Practical Field Guide · 2026</p>
   <h1>DSA in 2026, when the AI writes the code</h1>
   <p class="sub">What's still worth learning, why, and how to practise it so it sticks. Built for interviews <em>and</em> for shipping.</p>
 </header>
 
 <div class="toc">
+  <strong>Contents</strong>
   <ol>
     <li><a href="#s1">How to read this</a></li>
     <li><a href="#s2">What DSA catches — and doesn't</a></li>
