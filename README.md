@@ -36,16 +36,19 @@ through — while the surrounding prose is plain Markdown.
 ```
 npm install
 npm run dev      # local dev server
-npm run build    # static build to dist/
+npm run build    # static build into docs/
 npm run preview  # preview the production build
 ```
 
 ## Publish to GitHub Pages
 
-Deployment is automated by GitHub Actions (`.github/workflows/deploy.yml`):
-every push to `main` builds the site and publishes it to Pages.
+The site builds into `docs/` (see `outDir` in `astro.config.mjs`), which
+GitHub Pages serves directly — no build action required.
 
-**One-time setup:** in the repo, go to **Settings → Pages → Build and
-deployment → Source** and select **GitHub Actions**. (This replaces the old
-"Deploy from a branch" setting.) After that, pushes to `main` deploy
-automatically.
+**One-time setup:** in **Settings → Pages → Build and deployment**, keep
+**Source: Deploy from a branch**, and set the branch to **`main`** and the
+folder to **`/docs`**, then **Save**.
+
+**On every change:** run `npm run build` and commit the updated `docs/`
+alongside your source edits. The `docs/.nojekyll` file (copied from
+`public/`) ensures Pages serves the hashed `_astro/` asset folder.
