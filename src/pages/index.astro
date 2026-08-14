@@ -1,0 +1,12 @@
+---
+import Layout from '../layouts/Layout.astro';
+import { getEntry, render } from 'astro:content';
+
+const entry = await getEntry('guide', 'guide');
+if (!entry) throw new Error('Missing guide content: src/content/guide.md');
+const { Content } = await render(entry);
+---
+
+<Layout>
+  <Content />
+</Layout>
