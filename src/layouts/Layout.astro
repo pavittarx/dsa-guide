@@ -1,5 +1,6 @@
 ---
 import '../styles/global.css';
+import CodeRunner from '../components/CodeRunner.astro';
 
 interface Props {
   title?: string;
@@ -25,5 +26,6 @@ const {
     <div class="wrap">
       <slot />
     </div>
+    <CodeRunner />
   </body>
 </html>

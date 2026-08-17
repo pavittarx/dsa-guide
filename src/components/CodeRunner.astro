@@ -1,0 +1,267 @@
+---
+/*
+ * Upgrades every <pre data-run="slug"> block in the guide into a runnable,
+ * editable Python playground. Pure progressive enhancement: the markup ships
+ * as-is and this only attaches once the page is interactive, so the guide
+ * reads exactly the same with JS off or before hydration.
+ */
+---
+
+<script>
+  import { DEMOS } from '../scripts/demos';
+
+  const RUN_TIMEOUT_MS = 15_000;
+  const WORKER_URL = `${import.meta.env.BASE_URL.replace(/\/$/, '')}/py-worker.js`;
+
+  // One Pyodide worker shared by every block on the page — the ~7 MB runtime
+  // downloads once, not per block.
+  let worker: Worker | null = null;
+  let booted = false;
+  let activeRun: ((msg: any) => void) | null = null;
+
+  function getWorker(): Worker {
+    if (!worker) {
+      worker = new Worker(WORKER_URL);
+      worker.onmessage = (event) => activeRun?.(event.data);
+      worker.onerror = () => activeRun?.({ type: 'boot-error', message: 'Could not start the Python worker.' });
+    }
+    return worker;
+  }
+
+  function killWorker() {
+    worker?.terminate();
+    worker = null;
+    booted = false;
+  }
+
+  /** Source text of a block, with the <span class="cmt"> comment markup stripped. */
+  function sourceOf(pre: HTMLElement): string {
+    const code = pre.querySelector('code');
+    return (code?.textContent ?? '').replace(/\n+$/, '');
+  }
+
+  function buildProgram(pre: HTMLElement, body: string): string {
+    const demo = DEMOS[pre.dataset.run ?? ''] ?? {};
+    return [demo.before?.trim(), body, demo.after?.trim()].filter(Boolean).join('\n');
+  }
+
+  function enhance(pre: HTMLElement) {
+    const slug = pre.dataset.run ?? '';
+    const original = pre.innerHTML;
+    const demo = DEMOS[slug] ?? {};
+
+    const shell = document.createElement('div');
+    shell.className = 'runner';
+    pre.parentNode?.insertBefore(shell, pre);
+    shell.appendChild(pre);
+
+    const bar = document.createElement('div');
+    bar.className = 'runner-bar';
+    bar.innerHTML = `
+      <button class="runbtn primary" type="button" data-act="run">▸ Run</button>
+      <button class="runbtn" type="button" data-act="edit">Edit</button>
+      <button class="runbtn" type="button" data-act="reset" hidden>Reset</button>
+      <button class="runbtn danger" type="button" data-act="stop" hidden>■ Stop</button>
+      <span class="runner-status"></span>`;
+    shell.appendChild(bar);
+
+    const out = document.createElement('div');
+    out.className = 'runner-out';
+    out.hidden = true;
+    out.innerHTML = '<pre class="runner-stream" tabindex="0"></pre>';
+    shell.appendChild(out);
+
+    const stream = out.querySelector('.runner-stream') as HTMLElement;
+    const status = bar.querySelector('.runner-status') as HTMLElement;
+    const btn = (act: string) => bar.querySelector(`[data-act="${act}"]`) as HTMLButtonElement;
+
+    let editor: HTMLTextAreaElement | null = null;
+
+    const currentSource = () => (editor ? editor.value : sourceOf(pre));
+
+    function autosize(el: HTMLTextAreaElement) {
+      el.style.height = 'auto';
+      el.style.height = `${el.scrollHeight}px`;
+    }
+
+    function toEditor() {
+      if (editor) return editor;
+      const ta = document.createElement('textarea');
+      ta.className = 'runner-editor';
+      ta.spellcheck = false;
+      ta.value = sourceOf(pre);
+      ta.setAttribute('aria-label', 'Editable Python source');
+
+      ta.addEventListener('input', () => autosize(ta));
+      ta.addEventListener('keydown', (e) => {
+        // Python needs real indentation, so Tab must indent rather than
+        // move focus. Escape still frees the keyboard for tab navigation.
+        if (e.key === 'Tab') {
+          e.preventDefault();
+          const { selectionStart: s, selectionEnd: t, value } = ta;
+          if (e.shiftKey) {
+            const lineStart = value.lastIndexOf('\n', s - 1) + 1;
+            if (value.slice(lineStart, lineStart + 4) === '    ') {
+              ta.value = value.slice(0, lineStart) + value.slice(lineStart + 4);
+              ta.selectionStart = ta.selectionEnd = Math.max(lineStart, s - 4);
+            }
+          } else {
+            ta.value = `${value.slice(0, s)}    ${value.slice(t)}`;
+            ta.selectionStart = ta.selectionEnd = s + 4;
+          }
+        } else if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) {
+          e.preventDefault();
+          run();
+        } else if (e.key === 'Escape') {
+          ta.blur();
+        }
+      });
+
+      pre.hidden = true;
+      shell.insertBefore(ta, bar);
+      editor = ta;
+      autosize(ta);
+      btn('edit').hidden = true;
+      btn('reset').hidden = false;
+      return ta;
+    }
+
+    function reset() {
+      editor?.remove();
+      editor = null;
+      pre.hidden = false;
+      pre.innerHTML = original;
+      btn('edit').hidden = false;
+      btn('reset').hidden = true;
+      out.hidden = true;
+      stream.textContent = '';
+      status.textContent = '';
+    }
+
+    function write(text: string, cls?: string) {
+      const node = document.createElement('span');
+      if (cls) node.className = cls;
+      node.textContent = text;
+      stream.appendChild(node);
+      out.hidden = false;
+    }
+
+    function setRunning(on: boolean) {
+      btn('run').disabled = on;
+      btn('stop').hidden = !on;
+    }
+
+    function run() {
+      const program = buildProgram(pre, currentSource());
+      stream.textContent = '';
+      out.hidden = false;
+      setRunning(true);
+      status.textContent = booted ? 'running…' : 'starting Python — first run downloads ~7 MB…';
+
+      const timer = window.setTimeout(() => {
+        finish();
+        killWorker();
+        write(`\n⏱ stopped after ${RUN_TIMEOUT_MS / 1000}s — infinite loop?\n`, 'runner-warn');
+        status.textContent = 'stopped';
+      }, RUN_TIMEOUT_MS);
+
+      function finish() {
+        window.clearTimeout(timer);
+        setRunning(false);
+        activeRun = null;
+      }
+
+      activeRun = (msg) => {
+        switch (msg.type) {
+          case 'ready':
+            booted = true;
+            status.textContent = 'running…';
+            break;
+          case 'out':
+            write(msg.text + '\n', msg.stream === 'err' ? 'runner-err' : undefined);
+            break;
+          case 'done':
+            finish();
+            status.textContent = `finished in ${msg.ms < 1 ? '<1' : Math.round(msg.ms)} ms`;
+            if (!stream.textContent) write('(no output — add a print())\n', 'runner-dim');
+            break;
+          case 'error':
+            finish();
+            write(`\n${msg.message}\n`, 'runner-err');
+            status.textContent = 'error';
+            break;
+          case 'boot-error':
+            finish();
+            killWorker();
+            write(`\nCould not load Python: ${msg.message}\nCheck your connection — the runtime loads from a CDN.\n`, 'runner-err');
+            status.textContent = 'failed to load';
+            break;
+        }
+      };
+
+      getWorker().postMessage({ type: 'run', code: program });
+    }
+
+    bar.addEventListener('click', (e) => {
+      const act = (e.target as HTMLElement).closest('button')?.dataset.act;
+      if (act === 'run') run();
+      else if (act === 'edit') toEditor().focus();
+      else if (act === 'reset') reset();
+      else if (act === 'stop') {
+        killWorker();
+        activeRun = null;
+        setRunning(false);
+        write('\n■ stopped\n', 'runner-warn');
+        status.textContent = 'stopped';
+      }
+    });
+
+    // Clicking the code is the obvious way in, so make it work too.
+    pre.addEventListener('click', () => {
+      if (!editor && !window.getSelection()?.toString()) toEditor().focus();
+    });
+
+    if (demo.before || demo.after) {
+      // Explain the added sample input once, on the first block — repeating it
+      // under all seventeen would just be noise.
+      btn('run').title = 'Runs this snippet with sample input added — press Edit to see it';
+      if (!document.querySelector('.runner-hint')) {
+        const hint = document.createElement('p');
+        hint.className = 'runner-hint';
+        hint.textContent = 'Run adds sample input around the snippet — press Edit to see and change it. Ctrl/⌘+Enter runs.';
+        shell.appendChild(hint);
+      }
+    }
+  }
+
+  function init() {
+    const blocks = document.querySelectorAll<HTMLElement>('pre[data-run]');
+    if (!blocks.length) return;
+    blocks.forEach(enhance);
+
+    // Warm the runtime once the reader shows intent, so the first Run is not
+    // a cold ~7 MB wait. Only on fast connections, and never on save-data.
+    const conn = (navigator as any).connection;
+    if (!conn?.saveData && !/2g/.test(conn?.effectiveType ?? '')) {
+      const warm = () => {
+        if (!booted) getWorker().postMessage({ type: 'preload' });
+      };
+      const io = new IntersectionObserver(
+        (entries) => {
+          if (entries.some((en) => en.isIntersecting)) {
+            io.disconnect();
+            warm();
+          }
+        },
+        { rootMargin: '600px' },
+      );
+      io.observe(blocks[0]);
+    }
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', init, { once: true });
+  } else {
+    init();
+  }
+</script>

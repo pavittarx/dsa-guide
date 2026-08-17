@@ -168,3 +168,47 @@ footer{margin-top:56px;padding-top:22px;border-top:1px solid var(--rule);color:v
   .plist li{flex-wrap:wrap}
   th,td{padding:8px 9px;font-size:.85rem}
 }
+
+/* ---- runnable code blocks (Pyodide) ------------------------------------ */
+.runner{margin:16px 0}
+.runner>pre{margin:0;border-radius:12px 12px 0 0;border-bottom:none;cursor:text}
+.runner-editor{
+  display:block;width:100%;resize:none;overflow:hidden;tab-size:4;
+  font-family:var(--mono);font-size:.85rem;line-height:1.55;
+  background:var(--codebg);color:var(--fg);
+  border:1px solid var(--rule);border-bottom:none;border-radius:12px 12px 0 0;
+  padding:14px 16px;outline:none;
+}
+.runner-editor:focus{border-color:var(--accent)}
+.runner-bar{
+  display:flex;gap:8px;align-items:center;flex-wrap:wrap;
+  background:var(--panel-2);border:1px solid var(--rule);
+  border-radius:0 0 12px 12px;padding:8px 12px;
+}
+.runner:has(.runner-out:not([hidden])) .runner-bar{border-radius:0}
+.runbtn{
+  font-family:var(--mono);font-size:.72rem;letter-spacing:.06em;text-transform:uppercase;font-weight:700;
+  padding:5px 12px;border-radius:999px;cursor:pointer;
+  border:1px solid var(--rule);background:var(--panel);color:var(--muted);
+}
+.runbtn:hover:not(:disabled){color:var(--fg);border-color:var(--muted)}
+.runbtn.primary{color:var(--accent);border-color:rgba(91,157,255,.4)}
+.runbtn.danger{color:var(--danger);border-color:rgba(255,138,138,.4)}
+.runbtn:disabled{opacity:.45;cursor:default}
+.runner-status{font-family:var(--mono);font-size:.7rem;color:var(--muted);margin-left:auto}
+.runner-out{
+  background:var(--codebg);border:1px solid var(--rule);border-top:none;
+  border-radius:0 0 12px 12px;overflow:hidden;
+}
+pre.runner-stream{
+  margin:0;border:none;border-radius:0;background:transparent;
+  max-height:340px;overflow:auto;padding:12px 16px;white-space:pre-wrap;word-break:break-word;
+}
+pre.runner-stream:empty{display:none}
+.runner-err{color:var(--danger)}
+.runner-warn{color:var(--warn)}
+.runner-dim{color:var(--muted)}
+.runner-hint{font-size:.78rem;color:var(--muted);margin:7px 2px 0}
+@media (max-width:560px){
+  .runner-status{margin-left:0;width:100%}
+}
