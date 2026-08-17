@@ -36,19 +36,29 @@ through — while the surrounding prose is plain Markdown.
 ```
 npm install
 npm run dev      # local dev server
-npm run build    # static build into docs/
+npm run build    # build, then publish the output to the repo root
 npm run preview  # preview the production build
 ```
 
 ## Publish to GitHub Pages
 
-The site builds into `docs/` (see `outDir` in `astro.config.mjs`), which
-GitHub Pages serves directly — no build action required.
+Same mechanism as the `system-design-guide` repo: the built static site lives
+at the **repo root** and GitHub Pages serves it with **Deploy from a branch →
+`main` → `/ (root)`**. No Actions workflow, no Pages setting to change.
 
-**One-time setup:** in **Settings → Pages → Build and deployment**, keep
-**Source: Deploy from a branch**, and set the branch to **`main`** and the
-folder to **`/docs`**, then **Save**.
+`npm run build` does both steps — Astro builds into `dist/`, then
+`scripts/publish-root.mjs` copies the output to the root:
 
-**On every change:** run `npm run build` and commit the updated `docs/`
-alongside your source edits. The `docs/.nojekyll` file (copied from
-`public/`) ensures Pages serves the hashed `_astro/` asset folder.
+| Published to root | What it is |
+| --- | --- |
+| `index.html` | the rendered guide |
+| `_astro/` | hashed CSS bundle |
+| `favicon.svg` | icon |
+| `.nojekyll` | stops Jekyll from hiding the `_astro/` folder |
+
+**On every change:** run `npm run build` and commit the updated root files
+alongside your source edits. `dist/` is only staging and stays gitignored.
+
+> Without `.nojekyll`, GitHub Pages runs the repo through Jekyll, which ignores
+> underscore-prefixed folders like `_astro/` (the CSS 404s) and renders
+> `README.md` as the homepage when no root `index.html` exists.

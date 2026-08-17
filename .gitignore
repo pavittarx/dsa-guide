@@ -1,4 +1,6 @@
-# build output
+# build staging — the published copy at the repo root IS committed
+# (index.html, _astro/, favicon.svg, .nojekyll), since GitHub Pages serves
+# this repo from "main / (root)".
 dist/
 # generated types
 .astro/
