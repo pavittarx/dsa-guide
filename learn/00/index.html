@@ -1,4 +1,4 @@
-<!DOCTYPE html><html lang="en"> <head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="description" content="Estimate what an approach costs before you write it, and know when the slow one is right."><link rel="icon" href="/dsa-guide/favicon.svg"><title>Unit 00 · Cost intuition — DSA course</title><link rel="stylesheet" href="/dsa-guide/_astro/index.h2oWxkvn.css"></head> <body> <div class="wrap">  <nav class="unit-top"> <a href="/dsa-guide/learn">← Course map</a> <a href="/dsa-guide/#s3">Reference §3 ↗</a> </nav> <header class="unit-head"> <p class="kicker">Unit 00 · core</p> <h1>Cost intuition</h1> <p class="sub">Estimate what an approach costs before you write it, and know when the slow one is right.</p> </header> <div id="unit-root" data-unit="{&#34;order&#34;:0,&#34;requires&#34;:[],&#34;ladder&#34;:&#34;u00-flag-check&#34;,&#34;varied&#34;:[&#34;u00-first-repeat&#34;],&#34;transfer&#34;:&#34;u00-busiest-minute&#34;}"> <section id="unit-locked" hidden class="card watch"> <span class="tag">locked</span> <p>This unit builds on work you haven't finished yet: <strong class="locked-list"></strong>.</p> <p> <a class="locked-link runbtn" href="/dsa-guide/learn">Go there first</a> <button class="runbtn" type="button" data-act="skip">Skip ahead anyway</button> </p> <p class="small">
+<!DOCTYPE html><html lang="en"> <head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="description" content="Estimate what an approach costs before you write it, and know when the slow one is right."><link rel="icon" href="/dsa-guide/favicon.svg"><title>Unit 00 · Cost intuition — DSA course</title><link rel="stylesheet" href="/dsa-guide/_astro/index.CoH3cmJx.css"></head> <body> <div class="wrap">  <nav class="unit-top"> <a href="/dsa-guide/learn">← Course map</a> <a href="/dsa-guide/#s3">Reference §3 ↗</a> </nav> <header class="unit-head"> <p class="kicker">Unit 00 · core</p> <h1>Cost intuition</h1> <p class="sub">Estimate what an approach costs before you write it, and know when the slow one is right.</p> </header> <div id="unit-root" data-unit="{&#34;order&#34;:0,&#34;requires&#34;:[],&#34;ladder&#34;:&#34;u00-flag-check&#34;,&#34;varied&#34;:[&#34;u00-first-repeat&#34;],&#34;transfer&#34;:&#34;u00-busiest-minute&#34;}"> <section id="unit-locked" hidden class="card watch"> <span class="tag">locked</span> <p>This unit builds on work you haven't finished yet: <strong class="locked-list"></strong>.</p> <p> <a class="locked-link runbtn" href="/dsa-guide/learn">Go there first</a> <button class="runbtn" type="button" data-act="skip">Skip ahead anyway</button> </p> <p class="small">
 Skipping is recorded as skipped, not completed — the map will keep showing
         the difference. The reference guide is never locked.
 </p> </section> <div id="unit-body" hidden> <article class="unit-prose"> <div class="card watch">
@@ -46,7 +46,10 @@ then collect the shorthand. Never the other way round.</p>
 <h2 id="read">Read</h2>
 <p>The reference guide covers the scale table in
 <a href="/dsa-guide/#s3">§3 — Cost intuition</a>. Skim it, then come back — the code below
-is where it sticks.</p> </article> <section class="ladder" data-ladder-lang="python" data-ladder-demo="
+is where it sticks.</p> </article> <section class="ladder"><h3>How you get there</h3><p class="small">
+Every rung runs on the same workload, so the times are comparable. Start
+        at the top and watch the cost, rather than taking the last one on faith.
+</p><p class="small ladder-note" hidden></p><div class="ladder-pane" data-lang="python" data-lang-label="Python" data-ladder-demo="
 import time
 
 # Setup: a big list of enabled flags, and a page asking for many of them.
@@ -64,10 +67,7 @@ elapsed = time.perf_counter() - start
 
 print(&#34;checked&#34;, len(needed), &#34;flags against&#34;, len(enabled), &#34;enabled ->&#34;, result)
 print(&#34;took %.3fs&#34; % elapsed)
-"><h3>How you get there</h3><p class="small">
-Every rung runs on the same workload, so the times are comparable. Start
-        at the top and watch the cost, rather than taking the last one on faith.
- Shown in Python.</p><article class="rung"><header class="rung-head"><span class="tag">1 · the innocent one-liner</span><span class="rung-cost">O(len(needed) × len(enabled))</span></header><pre class="rung-code"><code>def has_all(needed, enabled):
+"><article class="rung"><header class="rung-head"><span class="tag">1 · the innocent one-liner</span><span class="rung-cost">O(len(needed) × len(enabled))</span></header><pre class="rung-code"><code>def has_all(needed, enabled):
     return all(flag in enabled for flag in needed)
 </code></pre><div class="rung-bar"><button class="runbtn" type="button" data-act="run-rung">
 ▸ Run
@@ -99,7 +99,98 @@ Every rung runs on the same workload, so the times are comparable. Start
     return all(flag in on for flag in needed)
 </code></pre><div class="rung-bar"><button class="runbtn" type="button" data-act="run-rung">
 ▸ Run
-</button><span class="rung-status"></span></div><pre class="rung-out" hidden></pre><p class="rung-insight">Once you can see the two loops in your head, this is the version you would write at work. Read it as: &quot;make a set, then check every flag against it.&quot;</p></article></section> <h2 class="slot-head">Guided</h2> <section class="problem" data-problem-id="u00-flag-check" data-required="true" data-slot="ladder" data-langs="[&#34;python&#34;,&#34;javascript&#34;,&#34;cpp&#34;]" id="p-u00-flag-check"> <header class="problem-head"> <span class="tag">guided</span> <h3>The access check that got slow</h3> </header> <div class="problem-statement"> <p>A request handler checks whether every feature flag a page needs is enabled for the user. `enabled` is the list of flag names turned on for that user; `needed` is what the page asks for. Return true when every needed flag is enabled.</p><p>It shipped fine. Then the flag list grew, and this handler started showing up at the top of the latency graph.</p> </div>  <div class="lang-tabs" role="tablist"> <button class="langtab" type="button" role="tab" data-lang="python" aria-selected="true"> Python </button><button class="langtab" type="button" role="tab" data-lang="javascript" aria-selected="false"> JavaScript </button><button class="langtab" type="button" role="tab" data-lang="cpp" aria-selected="false"> C++ </button> </div> <div class="lang-pane" data-lang="python">   <textarea class="problem-editor" spellcheck="false" aria-label="Solution for The access check that got slow">def has_all(needed, enabled):
+</button><span class="rung-status"></span></div><pre class="rung-out" hidden></pre><p class="rung-insight">Once you can see the two loops in your head, this is the version you would write at work. Read it as: &quot;make a set, then check every flag against it.&quot;</p></article></div><div class="ladder-pane" data-lang="javascript" data-lang-label="JavaScript" data-ladder-demo="
+// Setup: a big list of enabled flags, and a page asking for many of them.
+const enabled = [];
+for (let i = 0; i < 120000; i++) enabled.push(&#34;flag-&#34; + i);
+
+const needed = [];
+for (let i = 0; i < 120000; i += 20) needed.push(&#34;flag-&#34; + i);
+
+const start = performance.now();
+const result = hasAll(needed, enabled);
+const elapsed = (performance.now() - start) / 1000;
+
+console.log(&#34;checked&#34;, needed.length, &#34;flags against&#34;, enabled.length, &#34;enabled ->&#34;, result);
+console.log(&#34;took &#34; + elapsed.toFixed(3) + &#34;s&#34;);
+" hidden><article class="rung"><header class="rung-head"><span class="tag">1 · the innocent one-liner</span><span class="rung-cost">O(needed.length × enabled.length)</span></header><pre class="rung-code"><code>function hasAll(needed, enabled) {
+  return needed.every((flag) =&gt; enabled.includes(flag));
+}
+</code></pre><div class="rung-bar"><button class="runbtn" type="button" data-act="run-rung">
+▸ Run
+</button><span class="rung-dies">dies at 120,000 flags × 6,000 lookups → seconds</span><span class="rung-status"></span></div><pre class="rung-out" hidden></pre><p class="rung-insight">No nested loop in sight — but `includes` walks the whole array, and it does that once per needed flag.</p></article><article class="rung"><header class="rung-head"><span class="tag">2 · the same thing, spelled out</span><span class="rung-cost">O(needed.length × enabled.length) — identical</span></header><pre class="rung-code"><code>function hasAll(needed, enabled) {
+  for (const flag of needed) {
+    let found = false;
+    for (const candidate of enabled) {   // &lt;- this is what includes() was doing
+      if (candidate === flag) {
+        found = true;
+        break;
+      }
+    }
+    if (!found) return false;
+  }
+  return true;
+}
+</code></pre><div class="rung-bar"><button class="runbtn" type="button" data-act="run-rung">
+▸ Run
+</button><span class="rung-status"></span></div><pre class="rung-out" hidden></pre><p class="rung-insight">Same work, now visible. The inner loop restarts from the top for every flag.</p></article><article class="rung"><header class="rung-head"><span class="tag">3 · remember what is enabled</span><span class="rung-cost">O(enabled.length + needed.length) time, O(enabled.length) space</span></header><pre class="rung-code"><code>function hasAll(needed, enabled) {
+  const on = new Set();
+  for (const flag of enabled) {
+    on.add(flag);
+  }
+
+  for (const flag of needed) {
+    if (!on.has(flag)) return false;
+  }
+  return true;
+}
+</code></pre><div class="rung-bar"><button class="runbtn" type="button" data-act="run-rung">
+▸ Run
+</button><span class="rung-status"></span></div><pre class="rung-out" hidden></pre><p class="rung-insight">Two loops side by side instead of nested. A Set answers membership without scanning.</p></article><article class="rung"><header class="rung-head"><span class="tag">4 · the short way (same thing)</span><span class="rung-cost">O(enabled.length + needed.length) — identical to the rung above</span></header><pre class="rung-code"><code>function hasAll(needed, enabled) {
+  const on = new Set(enabled);
+  return needed.every((flag) =&gt; on.has(flag));
+}
+</code></pre><div class="rung-bar"><button class="runbtn" type="button" data-act="run-rung">
+▸ Run
+</button><span class="rung-status"></span></div><pre class="rung-out" hidden></pre><p class="rung-insight">`new Set(enabled)` is that first loop. `every` is the second. Same machine, fewer keystrokes.</p></article></div><div class="ladder-pane" data-lang="cpp" data-lang-label="C++" data-ladder-demo="
+vector<string> enabled;
+for (int i = 0; i < 120000; i++) enabled.push_back(&#34;flag-&#34; + to_string(i));
+
+vector<string> needed;
+for (int i = 0; i < 120000; i += 20) needed.push_back(&#34;flag-&#34; + to_string(i));
+
+auto start = chrono::steady_clock::now();
+bool result = has_all(needed, enabled);
+double elapsed = chrono::duration<double>(chrono::steady_clock::now() - start).count();
+
+cout << &#34;checked &#34; << needed.size() << &#34; flags against &#34; << enabled.size()
+     << &#34; enabled -> &#34; << (result ? &#34;true&#34; : &#34;false&#34;) << endl;
+cout << &#34;took &#34; << fixed << setprecision(3) << elapsed << &#34;s&#34; << endl;
+" hidden><article class="rung"><header class="rung-head"><span class="tag">1 · search the vector every time</span><span class="rung-cost">O(needed.size() × enabled.size())</span></header><pre class="rung-code"><code>bool has_all(const vector&lt;string&gt;&amp; needed, const vector&lt;string&gt;&amp; enabled) {
+    for (const string&amp; flag : needed) {
+        bool found = false;
+        for (const string&amp; candidate : enabled) {   // restarts from the top
+            if (candidate == flag) { found = true; break; }
+        }
+        if (!found) return false;
+    }
+    return true;
+}
+</code></pre><div class="rung-bar"><button class="runbtn" type="button" data-act="run-rung">
+▸ Run
+</button><span class="rung-dies">dies at C++ is fast enough to hide this until the data is much bigger — which is exactly why it ships</span><span class="rung-status"></span></div><pre class="rung-out" hidden></pre><p class="rung-insight">std::find over a vector is a linear scan, run once per needed flag. C++ makes each step cheap, so the quadratic hides for longer before it hurts.</p></article><article class="rung"><header class="rung-head"><span class="tag">2 · remember what is enabled</span><span class="rung-cost">O(enabled.size() + needed.size()) average</span></header><pre class="rung-code"><code>bool has_all(const vector&lt;string&gt;&amp; needed, const vector&lt;string&gt;&amp; enabled) {
+    unordered_set&lt;string&gt; on;
+    for (const string&amp; flag : enabled) {
+        on.insert(flag);
+    }
+    for (const string&amp; flag : needed) {
+        if (on.find(flag) == on.end()) return false;
+    }
+    return true;
+}
+</code></pre><div class="rung-bar"><button class="runbtn" type="button" data-act="run-rung">
+▸ Run
+</button><span class="rung-status"></span></div><pre class="rung-out" hidden></pre><p class="rung-insight">unordered_set hashes the string once and jumps straight to a bucket. Two sequential loops instead of nested ones.</p></article></div></section> <h2 class="slot-head">Guided</h2> <section class="problem" data-problem-id="u00-flag-check" data-required="true" data-slot="ladder" data-langs="[&#34;python&#34;,&#34;javascript&#34;,&#34;cpp&#34;]" id="p-u00-flag-check"> <header class="problem-head"> <span class="tag">guided</span> <h3>The access check that got slow</h3> </header> <div class="problem-statement"> <p>A request handler checks whether every feature flag a page needs is enabled for the user. `enabled` is the list of flag names turned on for that user; `needed` is what the page asks for. Return true when every needed flag is enabled.</p><p>It shipped fine. Then the flag list grew, and this handler started showing up at the top of the latency graph.</p> </div>  <div class="lang-tabs" role="tablist"> <button class="langtab" type="button" role="tab" data-lang="python" aria-selected="true"> Python </button><button class="langtab" type="button" role="tab" data-lang="javascript" aria-selected="false"> JavaScript </button><button class="langtab" type="button" role="tab" data-lang="cpp" aria-selected="false"> C++ </button> </div> <div class="lang-pane" data-lang="python">   <textarea class="problem-editor" spellcheck="false" aria-label="Solution for The access check that got slow">def has_all(needed, enabled):
     # needed:  list of flag names this page requires
     # enabled: list of flag names turned on for this user
     ...
@@ -314,4 +405,4 @@ Every rung runs on the same workload, so the times are comparable. Start
 }
 </code></pre> </details> <script type="application/json" class="problem-data">{"tests":"\n  expect(busiest_minute({0, 1, 2, 61}), 0LL, \"minute 0 has three\");\n  expect(busiest_minute({61, 62, 0}), 1LL, \"minute 1 has two\");\n  expect(busiest_minute({}), -1LL, \"no events\");\n  expect(busiest_minute({0, 60}), 0LL, \"tie picks the earliest\");\n  expect(busiest_minute({120, 121, 60}), 2LL, \"later minute can win\");\n","hints":["Every timestamp belongs to exactly one minute. What turns a timestamp into its minute?","Count per minute in one pass, then pick the winner from the counts in a second pass.","For the tie rule, only replace the current best when the count is higher, or the count is equal and the minute is earlier."],"lang":"cpp"}</script> </div> </section>  <section class="inv-panel"> <h2 class="slot-head">Added to your inventory</h2> <div class="card"> <span class="tag">remember</span> <p><strong>Hash map / set</strong> — O(1) average insert and lookup</p> <p class="small">Answer &quot;have I seen this?&quot;, &quot;how many of each?&quot;, and &quot;where is it?&quot; without re-scanning. Solves more real problems than everything else here combined.</p> </div><div class="card"> <span class="tag">remember</span> <p><strong>Counting &amp; grouping</strong> — O(n) to build</p> <p class="small">Tally occurrences or bucket items by a computed key. Turns &quot;are these anagrams&quot;, &quot;most common error&quot;, and &quot;group by shape&quot; into two lines.</p> </div> <p class="small"><a href="/dsa-guide/inventory">See the whole inventory →</a></p> </section> <div id="unit-complete" hidden class="card win"> <span class="tag">unit complete</span> <p>Everything required here passes. The next unit is unlocked.</p> <p><a class="runbtn primary" href="/dsa-guide/learn">Back to the map</a></p> </div> </div> </div> <p id="storage-notice" hidden class="small">
 This browser won't let the page save progress, so it will be lost when you leave.
-</p> <script type="module" src="/dsa-guide/_astro/CourseRuntime.astro_astro_type_script_index_0_lang.DiqkYc95.js"></script>  </div> <script type="module" src="/dsa-guide/_astro/CodeRunner.astro_astro_type_script_index_0_lang.BdjFWucU.js"></script> </body></html>
+</p> <script type="module" src="/dsa-guide/_astro/CourseRuntime.astro_astro_type_script_index_0_lang.DBKGWVhA.js"></script>  </div> <script type="module" src="/dsa-guide/_astro/CodeRunner.astro_astro_type_script_index_0_lang.BdjFWucU.js"></script> </body></html>

@@ -9,46 +9,58 @@ interface Props {
 const { id } = Astro.props;
 const p = getProblem(id);
 
-// Show the ladder for the first language that has one.
-const lang = langsOf(p).find((l) => (p.impls[l]?.ladder?.length ?? 0) > 0);
-const impl = lang ? implOf(p, lang) : null;
-const rungs = impl?.ladder ?? [];
+// One pane per language that actually has a ladder. The runtime shows the one
+// matching the selected tab, and says so when it has to fall back.
+const ladderLangs = langsOf(p).filter((l) => (p.impls[l]?.ladder?.length ?? 0) > 0);
 ---
 
 {
-  rungs.length > 0 && lang && (
-    <section class="ladder" data-ladder-lang={lang} data-ladder-demo={impl?.ladderDemo ?? ''}>
+  ladderLangs.length > 0 && (
+    <section class="ladder">
       <h3>How you get there</h3>
       <p class="small">
         Every rung runs on the same workload, so the times are comparable. Start
         at the top and watch the cost, rather than taking the last one on faith.
-        {langsOf(p).length > 1 && ` Shown in ${LANG_LABEL[lang]}.`}
       </p>
+      <p class="small ladder-note" hidden></p>
 
-      {rungs.map((r, i) => (
-        <article class="rung">
-          <header class="rung-head">
-            <span class="tag">
-              {i + 1} · {r.label}
-            </span>
-            <span class="rung-cost">{r.complexity}</span>
-          </header>
+      {ladderLangs.map((lang, i) => {
+        const impl = implOf(p, lang);
+        return (
+          <div
+            class="ladder-pane"
+            data-lang={lang}
+            data-lang-label={LANG_LABEL[lang]}
+            data-ladder-demo={impl.ladderDemo ?? ''}
+            hidden={i !== 0}
+          >
+            {(impl.ladder ?? []).map((r, n) => (
+              <article class="rung">
+                <header class="rung-head">
+                  <span class="tag">
+                    {n + 1} · {r.label}
+                  </span>
+                  <span class="rung-cost">{r.complexity}</span>
+                </header>
 
-          <pre class="rung-code"><code>{r.code}</code></pre>
+                <pre class="rung-code"><code>{r.code}</code></pre>
 
-          <div class="rung-bar">
-            <button class="runbtn" type="button" data-act="run-rung">
-              ▸ Run
-            </button>
-            {r.diesAt && <span class="rung-dies">dies at {r.diesAt}</span>}
-            <span class="rung-status" />
+                <div class="rung-bar">
+                  <button class="runbtn" type="button" data-act="run-rung">
+                    ▸ Run
+                  </button>
+                  {r.diesAt && <span class="rung-dies">dies at {r.diesAt}</span>}
+                  <span class="rung-status" />
+                </div>
+
+                <pre class="rung-out" hidden />
+
+                <p class="rung-insight">{r.insight}</p>
+              </article>
+            ))}
           </div>
-
-          <pre class="rung-out" hidden />
-
-          <p class="rung-insight">{r.insight}</p>
-        </article>
-      ))}
+        );
+      })}
     </section>
   )
 }

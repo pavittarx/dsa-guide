@@ -361,3 +361,6 @@ details.pattern > summary.phead:hover h3{color:var(--accent)}
 .langtab[aria-selected="true"]{color:var(--accent);border-color:rgba(91,157,255,.45);background:var(--panel)}
 .lang-note{margin:10px 0 0;color:var(--muted)}
 .lang-remote{margin:10px 0 0;color:var(--warn)}
+/* Safety net: an editor must never render as a sliver, even if it was
+   measured while its language pane was hidden. */
+.problem-editor{min-height:7.5em}

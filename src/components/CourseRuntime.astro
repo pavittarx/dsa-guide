@@ -158,6 +158,34 @@
     });
   }
 
+  /** Applies a language choice to every problem and ladder on the page. */
+  function applyLang(lang: string) {
+    document.querySelectorAll<HTMLElement>('.problem').forEach((prob) => {
+      const langs: string[] = JSON.parse(prob.dataset.langs || '[]');
+      if (langs.includes(lang)) prob.dispatchEvent(new CustomEvent('setlang', { detail: lang }));
+    });
+
+    document.querySelectorAll<HTMLElement>('.ladder').forEach((ladder) => {
+      const lpanes = [...ladder.querySelectorAll<HTMLElement>('.ladder-pane')];
+      if (!lpanes.length) return;
+      // Fall back to the first ladder when this language has none written yet,
+      // and say so rather than quietly showing another language's code.
+      const match = lpanes.find((x) => x.dataset.lang === lang);
+      const active = match ?? lpanes[0];
+      lpanes.forEach((x) => { x.hidden = x !== active; });
+
+      const note = ladder.querySelector('.ladder-note') as HTMLElement | null;
+      if (note) {
+        if (match) {
+          note.hidden = true;
+        } else {
+          note.hidden = false;
+          note.textContent = `No ladder written in that language yet — showing ${active.dataset.langLabel}.`;
+        }
+      }
+    });
+  }
+
   function wireProblem(root: HTMLElement) {
     const id = root.dataset.problemId!;
     const panes = [...root.querySelectorAll<HTMLElement>('.lang-pane')];
@@ -171,6 +199,13 @@
     const show = (lang: string) => {
       panes.forEach((p) => { p.hidden = p.dataset.lang !== lang; });
       tabs.forEach((t) => t.setAttribute('aria-selected', String(t.dataset.lang === lang)));
+
+      // A hidden textarea reports scrollHeight 0, so panes sized while hidden
+      // come out collapsed. Re-measure once this one is actually on screen.
+      const shown = panes.find((p) => !p.hidden);
+      const ta = shown?.querySelector('.problem-editor') as HTMLTextAreaElement | undefined;
+      if (ta) { ta.style.height = 'auto'; ta.style.height = `${ta.scrollHeight}px`; }
+
       // Only pay for the Python runtime if Python is actually on screen.
       if (lang === 'python') preloadPython();
     };
@@ -179,11 +214,7 @@
       t.addEventListener('click', () => {
         const lang = t.dataset.lang!;
         rememberLang(lang);
-        // Keep every problem on the page in step with the choice.
-        document.querySelectorAll<HTMLElement>('.problem').forEach((other) => {
-          const langs: string[] = JSON.parse(other.dataset.langs || '[]');
-          if (langs.includes(lang)) other.dispatchEvent(new CustomEvent('setlang', { detail: lang }));
-        });
+        applyLang(lang);
       }),
     );
 
@@ -196,9 +227,11 @@
 
   // ---- ladder rungs ------------------------------------------------------
   function wireRung(rung: HTMLElement) {
-    const ladder = rung.closest('.ladder') as HTMLElement;
-    const lang = (ladder?.dataset.ladderLang || 'python') as Lang;
-    const demo = ladder?.dataset.ladderDemo || '';
+    // The rung's language comes from its own pane, so switching tabs switches
+    // which ladder runs — not just which one is on screen.
+    const pane = rung.closest('.ladder-pane') as HTMLElement;
+    const lang = (pane?.dataset.lang || 'python') as Lang;
+    const demo = pane?.dataset.ladderDemo || '';
     const code = ((rung.querySelector('.rung-code') as HTMLElement).textContent || '') + '\n' + demo;
     const out = rung.querySelector('.rung-out') as HTMLElement;
     const status = rung.querySelector('.rung-status') as HTMLElement;
@@ -266,6 +299,8 @@
       body.hidden = false;
       document.querySelectorAll<HTMLElement>('.problem').forEach(wireProblem);
       document.querySelectorAll<HTMLElement>('.rung').forEach(wireRung);
+      const remembered = preferredLang();
+      if (remembered) applyLang(remembered);
       refreshUnit();
     }
 
