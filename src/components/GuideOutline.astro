@@ -1,0 +1,81 @@
+---
+/*
+ * Behaviour for the collapsible reference sections. The sections themselves are
+ * native <details>, so everything here is enhancement: remembering which ones
+ * you left open, expand/collapse all, and opening the right section when you
+ * follow an anchor.
+ */
+---
+
+<script>
+  const KEY = 'dsa-guide.open-sections';
+
+  function readOpen(): string[] {
+    try {
+      const raw = localStorage.getItem(KEY);
+      const v = raw ? JSON.parse(raw) : null;
+      return Array.isArray(v) ? v : [];
+    } catch {
+      return [];
+    }
+  }
+
+  function saveOpen(ids: string[]) {
+    try {
+      localStorage.setItem(KEY, JSON.stringify(ids));
+    } catch {
+      /* private mode — collapsing still works, it just won't be remembered */
+    }
+  }
+
+  function init() {
+    const sections = [...document.querySelectorAll<HTMLDetailsElement>('details.sec')];
+    if (!sections.length) return;
+
+    const count = document.querySelector('.sec-count');
+    const sync = () => {
+      const open = sections.filter((s) => s.open);
+      if (count) count.textContent = `${open.length} of ${sections.length} open`;
+      saveOpen(open.map((s) => s.id));
+    };
+
+    // Restore what was left open. First visit: everything closed, so the page
+    // opens as a readable outline instead of a wall.
+    const remembered = readOpen();
+    if (remembered.length) {
+      sections.forEach((s) => { s.open = remembered.includes(s.id); });
+    }
+
+    sections.forEach((s) => s.addEventListener('toggle', sync));
+
+    document.getElementById('sec-controls')?.addEventListener('click', (e) => {
+      const act = (e.target as HTMLElement).closest('button')?.dataset.act;
+      if (!act) return;
+      sections.forEach((s) => { s.open = act === 'expand-all'; });
+      sync();
+    });
+
+    // An anchor must open the section it points into, whether the target is the
+    // section itself (#s6) or something nested inside it.
+    const openForHash = (scroll: boolean) => {
+      const id = decodeURIComponent(location.hash.slice(1));
+      if (!id) return;
+      const target = document.getElementById(id);
+      if (!target) return;
+      let node: HTMLElement | null = target;
+      while (node) {
+        if (node instanceof HTMLDetailsElement) node.open = true;
+        node = node.parentElement;
+      }
+      if (scroll) target.scrollIntoView();
+      sync();
+    };
+
+    window.addEventListener('hashchange', () => openForHash(true));
+    openForHash(true);
+    sync();
+  }
+
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init, { once: true });
+  else init();
+</script>

@@ -1,12 +1,18 @@
 ---
 import Layout from '../layouts/Layout.astro';
+import GuideOutline from '../components/GuideOutline.astro';
 import { getEntry, render } from 'astro:content';
 
 const entry = await getEntry('guide', 'guide');
 if (!entry) throw new Error('Missing guide content: src/content/guide.md');
 const { Content } = await render(entry);
+const base = import.meta.env.BASE_URL.replace(/\/$/, '');
 ---
 
 <Layout>
   <Content />
+  <p class="small" style="margin-top:30px">
+    Practising rather than reading? <a href={`${base}/learn`}>Start the course →</a>
+  </p>
+  <GuideOutline />
 </Layout>

@@ -303,3 +303,49 @@ pre.inv-micro{margin:10px 0}
   .problem-status,.rung-status{margin-left:0;width:100%}
   .unit-card{flex-wrap:wrap}
 }
+
+/* ---- collapsible reference sections ------------------------------------ */
+.sec-controls{
+  display:flex;gap:8px;align-items:center;flex-wrap:wrap;
+  position:sticky;top:0;z-index:5;
+  background:var(--bg);padding:10px 0;margin:26px 0 4px;
+  border-bottom:1px solid var(--rule);
+}
+.sec-count{font-family:var(--mono);font-size:.7rem;color:var(--muted);margin-left:auto}
+
+details.sec{border-bottom:1px solid var(--rule)}
+details.sec > summary.sec-head{
+  cursor:pointer;list-style:none;padding:2px 0;
+  display:flex;align-items:baseline;gap:10px;
+}
+details.sec > summary.sec-head::-webkit-details-marker{display:none}
+details.sec > summary.sec-head::before{
+  content:"\25B8";color:var(--accent);font-size:.8rem;flex:0 0 auto;
+  transition:transform .12s ease;
+}
+details.sec[open] > summary.sec-head::before{transform:rotate(90deg)}
+details.sec > summary.sec-head h2{margin:18px 0;flex:1}
+details.sec > summary.sec-head:hover h2{color:var(--accent)}
+.sec-body{padding-bottom:22px}
+.sec-body > h2:first-child{margin-top:0}
+details.sec:target > summary.sec-head h2{color:var(--accent)}
+
+/* pattern cards collapse individually inside section 6 */
+details.pattern > summary.phead{
+  cursor:pointer;list-style:none;
+  display:flex;align-items:center;gap:10px;
+}
+details.pattern > summary.phead::-webkit-details-marker{display:none}
+details.pattern > summary.phead::before{
+  content:"\25B8";color:var(--accent);font-size:.78rem;transition:transform .12s ease;
+}
+details.pattern[open] > summary.phead::before{transform:rotate(90deg)}
+details.pattern > summary.phead:hover h3{color:var(--accent)}
+
+@media (prefers-reduced-motion:reduce){
+  details.sec > summary.sec-head::before,
+  details.pattern > summary.phead::before{transition:none}
+}
+@media (max-width:560px){
+  .sec-count{margin-left:0;width:100%}
+}
