@@ -1,0 +1,48 @@
+---
+import Layout from '../layouts/Layout.astro';
+import CourseRuntime from '../components/CourseRuntime.astro';
+import { PRIMITIVES, MOVES } from '../scripts/inventory';
+
+const base = import.meta.env.BASE_URL.replace(/\/$/, '');
+const pad = (n: number) => String(n).padStart(2, '0');
+const moves = Object.keys(MOVES) as (keyof typeof MOVES)[];
+---
+
+<Layout title="Inventory — DSA course" description="Every primitive the course teaches, with what it costs, what it is for, and the mistake people make with it.">
+  <nav class="unit-top"><a href={`${base}/learn`}>← Course map</a></nav>
+
+  <header class="unit-head">
+    <p class="kicker">Inventory</p>
+    <h1>What's on your belt</h1>
+    <p class="sub">
+      Grouped by the move each one makes. A table row can't teach a heap, so
+      every entry carries a worked example and the mistake people actually make.
+    </p>
+  </header>
+
+  {moves.map((m) => (
+    <section class="inv-move">
+      <h2>{MOVES[m].label}</h2>
+      <p class="sub">{MOVES[m].blurb}</p>
+      <p class="small"><em>Symptom:</em> {MOVES[m].symptom}</p>
+
+      {PRIMITIVES.filter((p) => p.move === m).map((p) => (
+        <article class="inv-row" data-inv-unit={p.unit}>
+          <header class="inv-head">
+            <strong>{p.name}</strong>
+            <span class="inv-cost">{p.cost}</span>
+            <span class="inv-state"></span>
+          </header>
+          <p>{p.purpose}</p>
+          <pre class="inv-micro"><code>{p.micro}</code></pre>
+          <p class="small"><strong>Watch out:</strong> {p.pitfall}</p>
+          <p class="small">
+            Taught in <a href={`${base}/learn/${pad(p.unit)}`}>unit {pad(p.unit)}</a>
+          </p>
+        </article>
+      ))}
+    </section>
+  ))}
+
+  <CourseRuntime />
+</Layout>

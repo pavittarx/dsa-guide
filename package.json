@@ -6,7 +6,8 @@
   "scripts": {
     "dev": "astro dev",
     "build": "astro build && node scripts/publish-root.mjs",
-    "preview": "astro preview"
+    "preview": "astro preview",
+    "verify": "tsx scripts/verify.mts"
   },
   "dependencies": {
     "astro": "^5.14.0"

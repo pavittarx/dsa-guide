@@ -1,0 +1,48 @@
+---
+import { getProblem } from '../problems';
+
+interface Props {
+  id: string;
+}
+
+const { id } = Astro.props;
+const p = getProblem(id);
+const rungs = p.ladder ?? [];
+---
+
+{
+  rungs.length > 0 && (
+    <section class="ladder">
+      <h3>How you get there</h3>
+      <p class="small">
+        Each rung runs. Start at the top and watch the cost, rather than taking
+        the last one on faith.
+      </p>
+
+      {rungs.map((r, i) => (
+        <article class="rung">
+          <header class="rung-head">
+            <span class="tag">
+              {i + 1} · {r.label}
+            </span>
+            <span class="rung-cost">{r.complexity}</span>
+          </header>
+
+          <pre class="rung-code"><code>{r.code}</code></pre>
+
+          <div class="rung-bar">
+            <button class="runbtn" type="button" data-act="run-rung">
+              ▸ Run
+            </button>
+            {r.diesAt && <span class="rung-dies">dies at {r.diesAt}</span>}
+            <span class="rung-status" />
+          </div>
+
+          <pre class="rung-out" hidden />
+
+          <p class="rung-insight">{r.insight}</p>
+        </article>
+      ))}
+    </section>
+  )
+}

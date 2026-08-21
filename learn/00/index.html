@@ -1,0 +1,80 @@
+<!DOCTYPE html><html lang="en"> <head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="description" content="Estimate what an approach costs before you write it, and know when the slow one is right."><link rel="icon" href="/dsa-guide/favicon.svg"><title>Unit 00 · Cost intuition — DSA course</title><link rel="stylesheet" href="/dsa-guide/_astro/index.-pjzZyQG.css"></head> <body> <div class="wrap">  <nav class="unit-top"> <a href="/dsa-guide/learn">← Course map</a> <a href="/dsa-guide/#s3">Reference §3 ↗</a> </nav> <header class="unit-head"> <p class="kicker">Unit 00 · core</p> <h1>Cost intuition</h1> <p class="sub">Estimate what an approach costs before you write it, and know when the slow one is right.</p> </header> <div id="unit-root" data-unit="{&#34;order&#34;:0,&#34;requires&#34;:[],&#34;ladder&#34;:&#34;u00-flag-check&#34;,&#34;varied&#34;:[&#34;u00-first-repeat&#34;],&#34;transfer&#34;:&#34;u00-busiest-minute&#34;}"> <section id="unit-locked" hidden class="card watch"> <span class="tag">locked</span> <p>This unit builds on work you haven't finished yet: <strong class="locked-list"></strong>.</p> <p> <a class="locked-link runbtn" href="/dsa-guide/learn">Go there first</a> <button class="runbtn" type="button" data-act="skip">Skip ahead anyway</button> </p> <p class="small">
+Skipping is recorded as skipped, not completed — the map will keep showing
+        the difference. The reference guide is never locked.
+</p> </section> <div id="unit-body" hidden> <article class="unit-prose"> <div class="card watch">
+  <span class="tag">09:40 · first week</span>
+  <p>Someone drops a graph in the channel. One endpoint's p99 has gone from 40 ms to 4 seconds over three months. The last deploy to that file was in March.</p>
+  <p>Nobody changed the code. The data changed.</p>
+</div>
+<h2 id="the-one-number">The one number</h2>
+<p>Everything in this course hangs off a single anchor:</p>
+<div class="card win">
+  <span class="tag">the anchor</span>
+  <p>A machine does roughly <strong>10<sup>7</sup> simple operations per second in Python</strong> — about 10<sup>8</sup>–10<sup>9</sup> in C, Rust, or Java. Memorise that and you can estimate the rest on your fingers.</p>
+</div>
+<p>The gap that matters is not between "fast" and "slow". It is between costs that
+grow at different rates. A linear scan over a million items is a tenth of a
+second. Checking every pair of a million items is fourteen hours. Same data,
+same machine, and nothing in the source code announces the difference.</p>
+<p>That is why this bug always ships: it was correct <strong>and</strong> fast in every test
+you ran, because your test had fifty rows.</p>
+<h2 id="the-three-moves">The three moves</h2>
+<p>Almost every speed-up in this course is one of three moves. Naming them gives
+you something to reach for when a pattern name will not come.</p>
+<div class="card">
+  <span class="tag">move 1 — remember</span>
+  <p><strong>Spend memory so you never compute the same thing twice.</strong> Symptom: the inner loop is re-deriving a fact the outer loop already knew.</p>
+</div>
+<div class="card">
+  <span class="tag">move 2 — order</span>
+  <p><strong>Impose structure once, then exploit it many times.</strong> Symptom: you keep asking for the smallest, the nearest, or the next larger thing.</p>
+</div>
+<div class="card">
+  <span class="tag">move 3 — once</span>
+  <p><strong>Arrange to touch each element a bounded number of times.</strong> Symptom: nested loops where the inner one never needs to go backwards.</p>
+</div>
+<p>This unit is about the first one, and about the judgement of when not to bother.</p>
+<h2 id="read">Read</h2>
+<p>The reference guide covers the scale table in
+<a href="/dsa-guide/#s3">§3 — Cost intuition</a>. Skim it, then come back — the code below
+is where it sticks.</p> </article> <section class="ladder"><h3>How you get there</h3><p class="small">
+Each rung runs. Start at the top and watch the cost, rather than taking
+        the last one on faith.
+</p><article class="rung"><header class="rung-head"><span class="tag">1 · the obvious one-liner</span><span class="rung-cost">O(len(needed) × len(enabled))</span></header><pre class="rung-code"><code>def has_all(needed, enabled):
+    return all(flag in enabled for flag in needed)
+</code></pre><div class="rung-bar"><button class="runbtn" type="button" data-act="run-rung">
+▸ Run
+</button><span class="rung-dies">dies at 120,000 flags × 600 lookups → seconds, not milliseconds</span><span class="rung-status"></span></div><pre class="rung-out" hidden></pre><p class="rung-insight">`in` on a list is a linear scan. Nothing in this code looks like a nested loop, but there is one hiding inside the `in`.</p></article><article class="rung"><header class="rung-head"><span class="tag">2 · remember what is enabled</span><span class="rung-cost">O(len(enabled) + len(needed)) time, O(len(enabled)) space</span></header><pre class="rung-code"><code>def has_all(needed, enabled):
+    on = set(enabled)
+    return all(flag in on for flag in needed)
+</code></pre><div class="rung-bar"><button class="runbtn" type="button" data-act="run-rung">
+▸ Run
+</button><span class="rung-status"></span></div><pre class="rung-out" hidden></pre><p class="rung-insight">One pass builds a set; every later membership question is answered in constant time. You bought time with memory.</p></article></section> <h2 class="slot-head">Guided</h2> <section class="problem" data-problem-id="u00-flag-check" data-required="true" data-slot="ladder" id="p-u00-flag-check"> <header class="problem-head"> <span class="tag">guided</span> <h3>The access check that got slow</h3> </header> <div class="problem-statement"> <p>A request handler checks whether every feature flag a page needs is enabled for the user. `enabled` is the list of flag names turned on for that user; `needed` is what the page asks for. Return `True` when every needed flag is enabled.</p><p>It shipped fine. Then the flag list grew, and this handler started showing up at the top of the latency graph.</p> </div>  <textarea class="problem-editor" spellcheck="false" aria-label="Solution for The access check that got slow">def has_all(needed, enabled):
+    # enabled: list of flag names turned on for this user
+    ...
+</textarea> <div class="problem-bar"> <button class="runbtn primary" type="button" data-act="submit">▸ Submit</button> <button class="runbtn" type="button" data-act="run">Run</button> <button class="runbtn" type="button" data-act="hint">Hint</button> <button class="runbtn" type="button" data-act="reset">Reset</button> <button class="runbtn danger" type="button" data-act="stop" hidden>■ Stop</button> <span class="problem-status"></span> </div> <div class="problem-hints" hidden></div> <ol class="problem-results" hidden></ol> <pre class="problem-out" tabindex="0" hidden></pre> <details class="problem-solution" hidden> <summary>Reference solution</summary> <pre><code>def has_all(needed, enabled):
+    on = set(enabled)
+    return all(flag in on for flag in needed)
+</code></pre> </details> <script type="application/json" class="problem-data">{"tests":"\nexpect(has_all([\"a\"], [\"a\", \"b\"]), True, \"flag is enabled\")\nexpect(has_all([\"z\"], [\"a\", \"b\"]), False, \"flag is missing\")\nexpect(has_all([], [\"a\"]), True, \"asking for nothing is satisfied\")\nexpect(has_all([\"a\", \"a\"], [\"a\"]), True, \"repeated request\")\nexpect(has_all([\"a\", \"z\"], [\"a\", \"b\"]), False, \"one of two missing\")\n\nbig = [\"flag-%d\" % i for i in range(120_000)]\nask = [\"flag-%d\" % i for i in range(0, 120_000, 20)]\nunder(1.5, \"stays fast on a large flag list\", lambda: has_all(ask, big))\n","hints":["What is the cost of `x in some_list`? It is not O(1).","The check re-walks `enabled` from the start for every flag in `needed`.","Pay once to build something with O(1) membership, then ask it many times."],"entry":"has_all"}</script> </section>  <h2 class="slot-head">Varied practice</h2> <p class="small">Different jobs on the surface. The same move underneath.</p> <section class="problem" data-problem-id="u00-first-repeat" data-required="true" data-slot="varied" id="p-u00-first-repeat"> <header class="problem-head"> <span class="tag">varied practice</span> <h3>The delivery that arrived twice</h3> </header> <div class="problem-statement"> <p>A queue consumer receives message ids and must stop the first time it sees one it has already handled. Return the first id that appears for a second time, or `None` if every id is unique.</p> </div>  <textarea class="problem-editor" spellcheck="false" aria-label="Solution for The delivery that arrived twice">def first_repeat(ids):
+    ...
+</textarea> <div class="problem-bar"> <button class="runbtn primary" type="button" data-act="submit">▸ Submit</button> <button class="runbtn" type="button" data-act="run">Run</button> <button class="runbtn" type="button" data-act="hint">Hint</button> <button class="runbtn" type="button" data-act="reset">Reset</button> <button class="runbtn danger" type="button" data-act="stop" hidden>■ Stop</button> <span class="problem-status"></span> </div> <div class="problem-hints" hidden></div> <ol class="problem-results" hidden></ol> <pre class="problem-out" tabindex="0" hidden></pre> <details class="problem-solution" hidden> <summary>Reference solution</summary> <pre><code>def first_repeat(ids):
+    seen = set()
+    for i in ids:
+        if i in seen:
+            return i
+        seen.add(i)
+    return None
+</code></pre> </details> <script type="application/json" class="problem-data">{"tests":"\nexpect(first_repeat([1, 2, 3, 2, 1]), 2, \"first repeat is 2\")\nexpect(first_repeat([1, 2, 3]), None, \"all unique\")\nexpect(first_repeat([]), None, \"empty\")\nexpect(first_repeat([\"a\", \"b\", \"a\"]), \"a\", \"works on strings\")\nexpect(first_repeat([5, 5]), 5, \"immediate repeat\")\n\nbig = list(range(150_000)) + [7]\nunder(2.0, \"stays fast on a long stream\", lambda: first_repeat(big))\n","hints":["You only need to answer one question per element: \"have I seen this before?\"","A set answers that in constant time, and you can build it as you go."],"entry":"first_repeat"}</script> </section>   <h2 class="slot-head">Transfer</h2> <p class="small">No pattern is named. Choosing it is the skill.</p> <section class="problem" data-problem-id="u00-busiest-minute" data-required="true" data-slot="transfer" id="p-u00-busiest-minute"> <header class="problem-head"> <span class="tag">transfer — pattern not named</span> <h3>Which minute hurt?</h3> </header> <div class="problem-statement"> <p>You have a list of event timestamps in seconds. Return the minute that contains the most events — a minute being `timestamp // 60`. If several tie, return the earliest.</p><p>No pattern is named for this one. Work out what the problem is really asking before you write anything.</p> </div>  <textarea class="problem-editor" spellcheck="false" aria-label="Solution for Which minute hurt?">def busiest_minute(timestamps):
+    ...
+</textarea> <div class="problem-bar"> <button class="runbtn primary" type="button" data-act="submit">▸ Submit</button> <button class="runbtn" type="button" data-act="run">Run</button> <button class="runbtn" type="button" data-act="hint">Hint</button> <button class="runbtn" type="button" data-act="reset">Reset</button> <button class="runbtn danger" type="button" data-act="stop" hidden>■ Stop</button> <span class="problem-status"></span> </div> <div class="problem-hints" hidden></div> <ol class="problem-results" hidden></ol> <pre class="problem-out" tabindex="0" hidden></pre> <details class="problem-solution" hidden> <summary>Reference solution</summary> <pre><code>def busiest_minute(timestamps):
+    if not timestamps:
+        return None
+    counts = {}
+    for t in timestamps:
+        m = t // 60
+        counts[m] = counts.get(m, 0) + 1
+    best = max(counts.values())
+    return min(m for m, c in counts.items() if c == best)
+</code></pre> </details> <script type="application/json" class="problem-data">{"tests":"\nexpect(busiest_minute([0, 1, 2, 61]), 0, \"minute 0 has three\")\nexpect(busiest_minute([61, 62, 0]), 1, \"minute 1 has two\")\nexpect(busiest_minute([]), None, \"no events\")\nexpect(busiest_minute([0, 60]), 0, \"tie picks the earliest\")\nexpect(busiest_minute([120, 121, 60]), 2, \"later minute can win\")\n\n# Correctness catches the wrong approach here, so this is only a guard\n# against something absurdly slow — hence the generous limit.\nbig = [i for i in range(200_000)] + [90] * 10\nunder(5.0, \"stays fast on a long day\", lambda: busiest_minute(big))\n","hints":["Every timestamp belongs to exactly one bucket. What is the bucket key?","Tally per bucket in one pass, then pick the winner from the tally.","For the tie rule, take the smallest key among those holding the maximum count."],"entry":"busiest_minute"}</script> </section>  <section class="inv-panel"> <h2 class="slot-head">Added to your inventory</h2> <div class="card"> <span class="tag">remember</span> <p><strong>Hash map / set</strong> — O(1) average insert and lookup</p> <p class="small">Answer &quot;have I seen this?&quot;, &quot;how many of each?&quot;, and &quot;where is it?&quot; without re-scanning. Solves more real problems than everything else here combined.</p> </div><div class="card"> <span class="tag">remember</span> <p><strong>Counting &amp; grouping</strong> — O(n) to build</p> <p class="small">Tally occurrences or bucket items by a computed key. Turns &quot;are these anagrams&quot;, &quot;most common error&quot;, and &quot;group by shape&quot; into two lines.</p> </div> <p class="small"><a href="/dsa-guide/inventory">See the whole inventory →</a></p> </section> <div id="unit-complete" hidden class="card win"> <span class="tag">unit complete</span> <p>Everything required here passes. The next unit is unlocked.</p> <p><a class="runbtn primary" href="/dsa-guide/learn">Back to the map</a></p> </div> </div> </div> <p id="storage-notice" hidden class="small">
+This browser won't let the page save progress, so it will be lost when you leave.
+</p> <script type="module" src="/dsa-guide/_astro/CourseRuntime.astro_astro_type_script_index_0_lang.CYbG6eDT.js"></script>  </div> <script type="module" src="/dsa-guide/_astro/CodeRunner.astro_astro_type_script_index_0_lang.BdjFWucU.js"></script> </body></html>

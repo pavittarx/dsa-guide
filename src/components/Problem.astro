@@ -1,0 +1,75 @@
+---
+import { getProblem } from '../problems';
+
+interface Props {
+  id: string;
+  kind: 'ladder' | 'varied' | 'retrieval' | 'transfer';
+  /** Counts toward unit completion (FR-6). */
+  required?: boolean;
+}
+
+const { id, kind, required = kind !== 'retrieval' } = Astro.props;
+const p = getProblem(id);
+
+// A transfer problem must not leak what it is until it's solved (FR-13):
+// no skill tags, no "related problem" link.
+const isTransfer = kind === 'transfer';
+
+const slotLabel: Record<Props['kind'], string> = {
+  ladder: 'guided',
+  varied: 'varied practice',
+  retrieval: 'retrieval',
+  transfer: 'transfer — pattern not named',
+};
+---
+
+<section
+  class="problem"
+  data-problem-id={id}
+  data-required={String(required)}
+  data-slot={kind}
+  id={`p-${id}`}
+>
+  <header class="problem-head">
+    <span class="tag">{slotLabel[kind]}</span>
+    <h3>{p.title}</h3>
+  </header>
+
+  <div class="problem-statement">
+    {p.statement.split('\n\n').map((para) => <p set:html={para.replace(/\n/g, '<br>')} />)}
+  </div>
+
+  {!isTransfer && p.source && (
+    <p class="small">
+      <a href={p.source.url} rel="noopener noreferrer" target="_blank">{p.source.name}</a>
+    </p>
+  )}
+
+  <textarea class="problem-editor" spellcheck="false" aria-label={`Solution for ${p.title}`}
+    >{p.starter}</textarea
+  >
+
+  <div class="problem-bar">
+    <button class="runbtn primary" type="button" data-act="submit">▸ Submit</button>
+    <button class="runbtn" type="button" data-act="run">Run</button>
+    <button class="runbtn" type="button" data-act="hint">Hint</button>
+    <button class="runbtn" type="button" data-act="reset">Reset</button>
+    <button class="runbtn danger" type="button" data-act="stop" hidden>■ Stop</button>
+    <span class="problem-status"></span>
+  </div>
+
+  <div class="problem-hints" hidden></div>
+  <ol class="problem-results" hidden></ol>
+  <pre class="problem-out" tabindex="0" hidden></pre>
+
+  <details class="problem-solution" hidden>
+    <summary>Reference solution</summary>
+    <pre><code>{p.solution}</code></pre>
+  </details>
+
+  <script
+    type="application/json"
+    class="problem-data"
+    set:html={JSON.stringify({ tests: p.tests, hints: p.hints, entry: p.entry })}
+  />
+</section>

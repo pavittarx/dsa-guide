@@ -13,3 +13,4 @@ npm-debug.log*
 .env.production
 # macOS
 .DS_Store
+.verify/

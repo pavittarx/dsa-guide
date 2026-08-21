@@ -1,0 +1,126 @@
+---
+import { getCollection, render } from 'astro:content';
+import Layout from '../../layouts/Layout.astro';
+import CourseRuntime from '../../components/CourseRuntime.astro';
+import Problem from '../../components/Problem.astro';
+import Ladder from '../../components/Ladder.astro';
+import { PRIMITIVES } from '../../scripts/inventory';
+
+export async function getStaticPaths() {
+  const units = await getCollection('units');
+  return units.map((u) => ({
+    params: { unit: String(u.data.order).padStart(2, '0') },
+    props: { unit: u },
+  }));
+}
+
+const { unit } = Astro.props;
+const d = unit.data;
+const { Content } = await render(unit);
+const base = import.meta.env.BASE_URL.replace(/\/$/, '');
+const pad = (n: number) => String(n).padStart(2, '0');
+
+// Every unit is prerendered, so a deep link never 404s; gating is applied
+// client-side and a locked unit still explains itself (FR-4).
+const meta = JSON.stringify({
+  order: d.order,
+  requires: d.requires,
+  ladder: d.ladder,
+  varied: d.varied,
+  transfer: d.transfer ?? '',
+});
+
+const invHere = PRIMITIVES.filter((p) => d.inventory.includes(p.id));
+---
+
+<Layout title={`Unit ${pad(d.order)} · ${d.title} — DSA course`} description={d.skill}>
+  <nav class="unit-top">
+    <a href={`${base}/learn`}>← Course map</a>
+    {d.guideSection && <a href={`${base}/#${d.guideSection}`}>Reference §{d.guideSection.slice(1)} ↗</a>}
+  </nav>
+
+  <header class="unit-head">
+    <p class="kicker">Unit {pad(d.order)} · {d.track}</p>
+    <h1>{d.title}</h1>
+    <p class="sub">{d.skill}</p>
+  </header>
+
+  <div id="unit-root" data-unit={meta}>
+    <section id="unit-locked" hidden class="card watch">
+      <span class="tag">locked</span>
+      <p>This unit builds on work you haven't finished yet: <strong class="locked-list"></strong>.</p>
+      <p>
+        <a class="locked-link runbtn" href={`${base}/learn`}>Go there first</a>
+        <button class="runbtn" type="button" data-act="skip">Skip ahead anyway</button>
+      </p>
+      <p class="small">
+        Skipping is recorded as skipped, not completed — the map will keep showing
+        the difference. The reference guide is never locked.
+      </p>
+    </section>
+
+    <div id="unit-body" hidden>
+      <article class="unit-prose">
+        <Content />
+      </article>
+
+      <Ladder id={d.ladder} />
+
+      <h2 class="slot-head">Guided</h2>
+      <Problem id={d.ladder} kind="ladder" />
+
+      {d.varied.length > 0 && (
+        <>
+          <h2 class="slot-head">Varied practice</h2>
+          <p class="small">Different jobs on the surface. The same move underneath.</p>
+          {d.varied.map((pid) => <Problem id={pid} kind="varied" />)}
+        </>
+      )}
+
+      {d.retrieval.length > 0 && (
+        <>
+          <h2 class="slot-head">Retrieval</h2>
+          <p class="small">
+            From earlier units. These do not gate this unit — they are here because
+            pulling something back out of memory is what makes it stay.
+          </p>
+          {d.retrieval.map((pid) => <Problem id={pid} kind="retrieval" />)}
+        </>
+      )}
+
+      {d.transfer && (
+        <>
+          <h2 class="slot-head">Transfer</h2>
+          <p class="small">No pattern is named. Choosing it is the skill.</p>
+          <Problem id={d.transfer} kind="transfer" />
+        </>
+      )}
+
+      {invHere.length > 0 && (
+        <section class="inv-panel">
+          <h2 class="slot-head">Added to your inventory</h2>
+          {invHere.map((p) => (
+            <div class="card">
+              <span class="tag">{p.move}</span>
+              <p><strong>{p.name}</strong> — {p.cost}</p>
+              <p class="small">{p.purpose}</p>
+            </div>
+          ))}
+          <p class="small"><a href={`${base}/inventory`}>See the whole inventory →</a></p>
+        </section>
+      )}
+
+      <div id="unit-complete" hidden class="card win">
+        <span class="tag">unit complete</span>
+        <p>Everything required here passes. The next unit is unlocked.</p>
+        <p><a class="runbtn primary" href={`${base}/learn`}>Back to the map</a></p>
+      </div>
+    </div>
+  </div>
+
+  <p id="storage-notice" hidden class="small">
+    This browser won't let the page save progress, so it will be lost when you leave.
+  </p>
+
+  <CourseRuntime />
+</Layout>

@@ -26,8 +26,33 @@ function boot() {
   return pyodideReady;
 }
 
+/*
+ * Grading harness. Injected ahead of the reader's code so `expect` and `under`
+ * exist when the test block runs. Results are collected rather than raised, so
+ * one failing case doesn't hide the rest.
+ */
+const HARNESS = `
+import json, time
+_RESULTS = []
+
+def expect(actual, expected, label):
+    _RESULTS.append({"label": label, "ok": actual == expected,
+                     "actual": repr(actual)[:200], "expected": repr(expected)[:200]})
+
+def under(seconds, label, fn):
+    _t = time.perf_counter()
+    fn()
+    _dt = time.perf_counter() - _t
+    _RESULTS.append({"label": label, "ok": _dt < seconds,
+                     "actual": f"{_dt:.3f}s", "expected": f"< {seconds:.1f}s"})
+`;
+
+const TAIL = `
+_RESULTS_JSON = json.dumps(_RESULTS)
+`;
+
 self.onmessage = async (event) => {
-  const { type, code } = event.data || {};
+  const { type, code, tests } = event.data || {};
 
   if (type === 'preload') {
     try {
@@ -39,7 +64,7 @@ self.onmessage = async (event) => {
     return;
   }
 
-  if (type !== 'run') return;
+  if (type !== 'run' && type !== 'grade') return;
 
   let pyodide;
   try {
@@ -58,8 +83,18 @@ self.onmessage = async (event) => {
   const globals = pyodide.toPy({});
   const started = performance.now();
   try {
-    await pyodide.runPythonAsync(code, { globals });
-    self.postMessage({ type: 'done', ms: performance.now() - started });
+    if (type === 'grade') {
+      await pyodide.runPythonAsync(HARNESS + '\n' + code + '\n' + tests + TAIL, { globals });
+      const raw = globals.get('_RESULTS_JSON');
+      self.postMessage({
+        type: 'graded',
+        results: JSON.parse(raw || '[]'),
+        ms: performance.now() - started,
+      });
+    } else {
+      await pyodide.runPythonAsync(code, { globals });
+      self.postMessage({ type: 'done', ms: performance.now() - started });
+    }
   } catch (error) {
     self.postMessage({
       type: 'error',

@@ -1,0 +1,61 @@
+---
+import { getCollection } from 'astro:content';
+import Layout from '../../layouts/Layout.astro';
+import CourseRuntime from '../../components/CourseRuntime.astro';
+
+const units = (await getCollection('units')).sort((a, b) => a.data.order - b.data.order);
+const base = import.meta.env.BASE_URL.replace(/\/$/, '');
+const pad = (n: number) => String(n).padStart(2, '0');
+---
+
+<Layout title="Course map — DSA" description="A dependency-ordered course: one skill per unit, practised in varied forms and resurfaced on a schedule.">
+  <header class="unit-head">
+    <p class="kicker">The course</p>
+    <h1>One skill at a time</h1>
+    <p class="sub">
+      Each unit teaches one move, practises it in several disguises, and brings
+      earlier work back on a schedule. The
+      <a href={base + '/'}>reference guide</a> stays open the whole time — it is
+      never locked behind anything.
+    </p>
+  </header>
+
+  <p class="map-actions">
+    <a class="runbtn" href={`${base}/review`}>Review queue</a>
+    <span id="due-badge" class="pill" hidden></span>
+    <a class="runbtn" href={`${base}/inventory`}>Inventory</a>
+    <button class="runbtn" type="button" id="reset-progress">Reset progress</button>
+  </p>
+
+  <p id="storage-notice" hidden class="small">
+    This browser won't let the page save progress, so it will be lost when you leave.
+  </p>
+
+  <ol class="unit-map">
+    {units.map((u) => (
+      <li>
+        <a
+          class="unit-card"
+          href={`${base}/learn/${pad(u.data.order)}`}
+          data-unit-card={JSON.stringify({ order: u.data.order, requires: u.data.requires })}
+        >
+          <span class="unit-num">{pad(u.data.order)}</span>
+          <span class="unit-body">
+            <strong>{u.data.title}</strong>
+            <span class="unit-skill">{u.data.skill}</span>
+            <span class="unit-incident">{u.data.incident}</span>
+          </span>
+          <span class="state-pill"></span>
+        </a>
+      </li>
+    ))}
+  </ol>
+
+  <p class="small">
+    More units are specified than are built: see
+    <a href="https://github.com/pavittarx/dsa-guide/blob/main/docs/requirements.md">the requirements</a>
+    for the full spine.
+  </p>
+
+  <CourseRuntime />
+</Layout>

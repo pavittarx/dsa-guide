@@ -1,0 +1,320 @@
+---
+/*
+ * Client runtime for the course: grading, hints, gating, progress.
+ * Progressive enhancement — every page renders server-side first.
+ */
+---
+
+<script>
+  import { read, recordAttempt, setUnit, subscribe, watchOtherTabs, storageDenied, isSolved, due, reset, pad } from '../scripts/progress';
+  import { stateOf, blockedBy, isUnitComplete } from '../scripts/gating';
+
+  const RUN_TIMEOUT_MS = 15_000;
+  const WORKER_URL = `${import.meta.env.BASE_URL.replace(/\/$/, '')}/py-worker.js`;
+
+  let worker: Worker | null = null;
+  let booted = false;
+  let active: ((m: any) => void) | null = null;
+
+  function getWorker(): Worker {
+    if (!worker) {
+      worker = new Worker(WORKER_URL);
+      worker.onmessage = (e) => active?.(e.data);
+      worker.onerror = () => active?.({ type: 'boot-error', message: 'Could not start the Python worker.' });
+    }
+    return worker;
+  }
+  function killWorker() {
+    worker?.terminate();
+    worker = null;
+    booted = false;
+  }
+
+  /** One in-flight execution at a time; returns when the worker settles. */
+  function exec(msg: Record<string, unknown>, onOut: (t: string, err: boolean) => void): Promise<any> {
+    return new Promise((resolve) => {
+      const timer = window.setTimeout(() => {
+        active = null;
+        killWorker();
+        resolve({ type: 'timeout' });
+      }, RUN_TIMEOUT_MS);
+
+      active = (m) => {
+        if (m.type === 'ready') { booted = true; return; }
+        if (m.type === 'out') { onOut(m.text, m.stream === 'err'); return; }
+        window.clearTimeout(timer);
+        active = null;
+        resolve(m);
+      };
+      getWorker().postMessage(msg);
+    });
+  }
+
+  // ---- shared editor behaviour (Python needs real indentation) ------------
+  function wireEditor(ta: HTMLTextAreaElement, onSubmit: () => void) {
+    const autosize = () => { ta.style.height = 'auto'; ta.style.height = `${ta.scrollHeight}px`; };
+    autosize();
+    ta.addEventListener('input', autosize);
+    ta.addEventListener('keydown', (e) => {
+      if (e.key === 'Tab') {
+        e.preventDefault();
+        const { selectionStart: s, selectionEnd: t, value } = ta;
+        if (e.shiftKey) {
+          const ls = value.lastIndexOf('\n', s - 1) + 1;
+          if (value.slice(ls, ls + 4) === '    ') {
+            ta.value = value.slice(0, ls) + value.slice(ls + 4);
+            ta.selectionStart = ta.selectionEnd = Math.max(ls, s - 4);
+          }
+        } else {
+          ta.value = `${value.slice(0, s)}    ${value.slice(t)}`;
+          ta.selectionStart = ta.selectionEnd = s + 4;
+        }
+        autosize();
+      } else if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) {
+        e.preventDefault();
+        onSubmit();
+      } else if (e.key === 'Escape') {
+        ta.blur();
+      }
+    });
+  }
+
+  // ---- problems ----------------------------------------------------------
+  function wireProblem(root: HTMLElement) {
+    const id = root.dataset.problemId!;
+    const data = JSON.parse(root.querySelector('.problem-data')!.textContent || '{}');
+    const ta = root.querySelector('.problem-editor') as HTMLTextAreaElement;
+    const starter = ta.value;
+    const out = root.querySelector('.problem-out') as HTMLElement;
+    const results = root.querySelector('.problem-results') as HTMLElement;
+    const status = root.querySelector('.problem-status') as HTMLElement;
+    const hintBox = root.querySelector('.problem-hints') as HTMLElement;
+    const solution = root.querySelector('.problem-solution') as HTMLElement;
+    const btn = (a: string) => root.querySelector(`[data-act="${a}"]`) as HTMLButtonElement;
+
+    let hintsShown = 0;
+    wireEditor(ta, submit);
+
+    if (isSolved(id)) markSolved(false);
+
+    function markSolved(announce = true) {
+      root.classList.add('is-solved');
+      solution.hidden = false;
+      if (announce) status.textContent = 'passed';
+    }
+
+    function busy(on: boolean) {
+      btn('submit').disabled = on;
+      btn('run').disabled = on;
+      btn('stop').hidden = !on;
+    }
+
+    function writeOut(text: string, err: boolean) {
+      out.hidden = false;
+      const span = document.createElement('span');
+      if (err) span.className = 'runner-err';
+      span.textContent = text + '\n';
+      out.appendChild(span);
+    }
+
+    async function run() {
+      out.textContent = ''; out.hidden = true;
+      results.hidden = true; results.textContent = '';
+      busy(true);
+      status.textContent = booted ? 'running…' : 'starting Python…';
+      const r = await exec({ type: 'run', code: ta.value }, writeOut);
+      busy(false);
+      finishRun(r);
+    }
+
+    function finishRun(r: any) {
+      if (r.type === 'timeout') { writeOut('⏱ stopped after 15s — infinite loop?', true); status.textContent = 'stopped'; }
+      else if (r.type === 'error') { writeOut(r.message, true); status.textContent = 'error'; }
+      else if (r.type === 'boot-error') { writeOut(`Could not load Python: ${r.message}`, true); status.textContent = 'unavailable'; }
+      else status.textContent = `ran in ${Math.max(1, Math.round(r.ms))} ms`;
+    }
+
+    async function submit() {
+      out.textContent = ''; out.hidden = true;
+      results.textContent = ''; results.hidden = true;
+      busy(true);
+      status.textContent = booted ? 'checking…' : 'starting Python…';
+
+      const r = await exec({ type: 'grade', code: ta.value, tests: data.tests }, writeOut);
+      busy(false);
+
+      if (r.type !== 'graded') {
+        recordAttempt(id, false);
+        finishRun(r);
+        return;
+      }
+
+      results.hidden = false;
+      let passed = 0;
+      for (const t of r.results) {
+        const li = document.createElement('li');
+        li.className = t.ok ? 'test-row ok' : 'test-row bad';
+        li.innerHTML =
+          `<span class="test-mark">${t.ok ? '✓' : '✗'}</span><span class="test-label"></span>`;
+        (li.querySelector('.test-label') as HTMLElement).textContent = t.label;
+        if (!t.ok) {
+          const d = document.createElement('div');
+          d.className = 'test-detail';
+          d.textContent = `expected ${t.expected} · got ${t.actual}`;
+          li.appendChild(d);
+        }
+        results.appendChild(li);
+        if (t.ok) passed++;
+      }
+
+      const allPassed = r.results.length > 0 && passed === r.results.length;
+      recordAttempt(id, allPassed);
+      status.textContent = allPassed
+        ? `passed ${passed}/${r.results.length} in ${Math.max(1, Math.round(r.ms))} ms`
+        : `${passed}/${r.results.length} passed`;
+      if (allPassed) markSolved();
+      refreshUnit();
+    }
+
+    root.addEventListener('click', (e) => {
+      const act = (e.target as HTMLElement).closest('button')?.dataset.act;
+      if (act === 'submit') submit();
+      else if (act === 'run') run();
+      else if (act === 'reset') { ta.value = starter; ta.dispatchEvent(new Event('input')); out.hidden = true; results.hidden = true; status.textContent = ''; }
+      else if (act === 'stop') { killWorker(); active = null; busy(false); writeOut('■ stopped', true); status.textContent = 'stopped'; }
+      else if (act === 'hint') {
+        if (hintsShown >= data.hints.length) { status.textContent = 'no more hints'; return; }
+        hintBox.hidden = false;
+        const p = document.createElement('p');
+        p.textContent = data.hints[hintsShown++];
+        hintBox.appendChild(p);
+        if (hintsShown >= data.hints.length) btn('hint').disabled = true;
+      }
+    });
+  }
+
+  // ---- ladder rungs ------------------------------------------------------
+  function wireRung(rung: HTMLElement) {
+    const code = (rung.querySelector('.rung-code') as HTMLElement).textContent || '';
+    const out = rung.querySelector('.rung-out') as HTMLElement;
+    const status = rung.querySelector('.rung-status') as HTMLElement;
+    rung.querySelector('[data-act="run-rung"]')!.addEventListener('click', async () => {
+      out.hidden = false; out.textContent = '';
+      status.textContent = booted ? 'running…' : 'starting Python…';
+      const r = await exec({ type: 'run', code }, (t, err) => {
+        const s = document.createElement('span');
+        if (err) s.className = 'runner-err';
+        s.textContent = t + '\n';
+        out.appendChild(s);
+      });
+      if (r.type === 'timeout') { status.textContent = 'stopped at 15s'; }
+      else if (r.type === 'graded' || r.type === 'done') { status.textContent = `${Math.max(1, Math.round(r.ms))} ms`; }
+      else { status.textContent = 'error'; const s = document.createElement('span'); s.className = 'runner-err'; s.textContent = (r.message || '') + '\n'; out.appendChild(s); }
+    });
+  }
+
+  // ---- unit gating + completion -----------------------------------------
+  let unitMeta: { order: number; requires: number[]; ladder: string; varied: string[]; transfer: string } | null = null;
+
+  function refreshUnit() {
+    if (!unitMeta) return;
+    const store = read();
+    const complete = isUnitComplete(
+      { ladder: unitMeta.ladder, varied: unitMeta.varied, transfer: unitMeta.transfer },
+      store,
+    );
+    const id = pad(unitMeta.order);
+    const already = store.units[id]?.state;
+    if (complete && already !== 'complete') setUnit(id, 'complete');
+    else if (!complete && !already) setUnit(id, 'in-progress');
+
+    const banner = document.getElementById('unit-complete');
+    if (banner) banner.hidden = !complete;
+  }
+
+  function gateUnit() {
+    const el = document.getElementById('unit-root') as HTMLElement | null;
+    if (!el) return;
+    unitMeta = JSON.parse(el.dataset.unit!);
+    const store = read();
+    const state = stateOf({ order: unitMeta!.order, requires: unitMeta!.requires }, store);
+    const body = document.getElementById('unit-body')!;
+    const locked = document.getElementById('unit-locked')!;
+
+    if (state === 'locked') {
+      locked.hidden = false;
+      const names = blockedBy({ order: unitMeta!.order, requires: unitMeta!.requires }, store);
+      const list = locked.querySelector('.locked-list') as HTMLElement;
+      list.textContent = names.map((n) => `Unit ${pad(n)}`).join(', ');
+      const link = locked.querySelector('.locked-link') as HTMLAnchorElement;
+      if (names.length) link.href = `${import.meta.env.BASE_URL.replace(/\/$/, '')}/learn/${pad(names[0])}`;
+    } else {
+      body.hidden = false;
+      document.querySelectorAll<HTMLElement>('.problem').forEach(wireProblem);
+      document.querySelectorAll<HTMLElement>('.rung').forEach(wireRung);
+      refreshUnit();
+    }
+
+    locked.querySelector('[data-act="skip"]')?.addEventListener('click', () => {
+      // FR-5: deliberate, and recorded as skipped rather than completed.
+      const names = blockedBy({ order: unitMeta!.order, requires: unitMeta!.requires }, read());
+      names.forEach((n) => setUnit(pad(n), 'skipped'));
+      location.reload();
+    });
+  }
+
+  // ---- map + review ------------------------------------------------------
+  function paintMap() {
+    const cards = document.querySelectorAll<HTMLElement>('[data-unit-card]');
+    if (!cards.length) return;
+    const store = read();
+    cards.forEach((card) => {
+      const meta = JSON.parse(card.dataset.unitCard!);
+      const state = stateOf(meta, store);
+      card.dataset.state = state;
+      const pill = card.querySelector('.state-pill') as HTMLElement;
+      if (pill) pill.textContent = state === 'in-progress' ? 'in progress' : state;
+      if (state === 'locked') card.setAttribute('aria-disabled', 'true');
+      else card.removeAttribute('aria-disabled');
+    });
+    const badge = document.getElementById('due-badge');
+    if (badge) {
+      const n = due().length;
+      badge.textContent = n ? `${n} due` : 'nothing due';
+      badge.hidden = false;
+    }
+  }
+
+  function paintInventory() {
+    const rows = document.querySelectorAll<HTMLElement>('[data-inv-unit]');
+    if (!rows.length) return;
+    const store = read();
+    rows.forEach((row) => {
+      const unit = Number(row.dataset.invUnit);
+      const s = store.units[pad(unit)]?.state;
+      row.dataset.state = s === 'complete' ? 'known' : s ? 'learning' : 'locked';
+    });
+  }
+
+  function noticeStorage() {
+    read();
+    if (!storageDenied) return;
+    const el = document.getElementById('storage-notice');
+    if (el) el.hidden = false;
+  }
+
+  function init() {
+    watchOtherTabs();
+    subscribe(() => { paintMap(); paintInventory(); });
+    gateUnit();
+    paintMap();
+    paintInventory();
+    noticeStorage();
+    document.getElementById('reset-progress')?.addEventListener('click', () => {
+      if (confirm('Reset all course progress? This cannot be undone.')) { reset(); location.reload(); }
+    });
+  }
+
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init, { once: true });
+  else init();
+</script>

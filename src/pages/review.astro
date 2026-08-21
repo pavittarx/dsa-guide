@@ -1,0 +1,51 @@
+---
+import Layout from '../layouts/Layout.astro';
+import CourseRuntime from '../components/CourseRuntime.astro';
+import Problem from '../components/Problem.astro';
+import { ALL } from '../problems';
+import { INTERVALS } from '../scripts/progress';
+
+const base = import.meta.env.BASE_URL.replace(/\/$/, '');
+// Every problem is rendered; the runtime shows only the ones actually due.
+---
+
+<Layout title="Review — DSA course" description="Solved problems come back on a schedule, so what you learned stays learned.">
+  <nav class="unit-top"><a href={`${base}/learn`}>← Course map</a></nav>
+
+  <header class="unit-head">
+    <p class="kicker">Return set</p>
+    <h1>What's due</h1>
+    <p class="sub">
+      Solved problems come back after {INTERVALS.join(', ')} days. Getting one
+      right moves it further out; getting it wrong brings it back to the start.
+      Nothing here blocks the course — it just keeps what you learned from
+      quietly leaking away.
+    </p>
+  </header>
+
+  <p id="review-empty" class="card">
+    <span class="tag">nothing due</span>
+    Solve something in a unit and it will show up here tomorrow.
+  </p>
+
+  <div id="review-list">
+    {ALL.map((p) => (
+      <div class="review-item" data-review-id={p.id} hidden>
+        <Problem id={p.id} kind="retrieval" required={false} />
+      </div>
+    ))}
+  </div>
+
+  <CourseRuntime />
+
+  <script>
+    import { due } from '../scripts/progress';
+    const ids = new Set(due());
+    let shown = 0;
+    document.querySelectorAll<HTMLElement>('.review-item').forEach((el) => {
+      if (ids.has(el.dataset.reviewId!)) { el.hidden = false; shown++; }
+    });
+    const empty = document.getElementById('review-empty');
+    if (empty && shown > 0) empty.hidden = true;
+  </script>
+</Layout>
