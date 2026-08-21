@@ -8,49 +8,19 @@
 <script>
   import { read, recordAttempt, setUnit, subscribe, watchOtherTabs, storageDenied, isSolved, due, reset, pad } from '../scripts/progress';
   import { stateOf, blockedBy, isUnitComplete } from '../scripts/gating';
+  import { execute, stop, preloadPython, isRemote, type Outcome } from '../scripts/runners';
+  import type { Lang } from '../problems/_types';
 
-  const RUN_TIMEOUT_MS = 15_000;
-  const WORKER_URL = `${import.meta.env.BASE_URL.replace(/\/$/, '')}/py-worker.js`;
+  const LANG_KEY = 'dsa-course.lang';
 
-  let worker: Worker | null = null;
-  let booted = false;
-  let active: ((m: any) => void) | null = null;
+  const preferredLang = (): string => {
+    try { return localStorage.getItem(LANG_KEY) || ''; } catch { return ''; }
+  };
+  const rememberLang = (lang: string) => {
+    try { localStorage.setItem(LANG_KEY, lang); } catch { /* not fatal */ }
+  };
 
-  function getWorker(): Worker {
-    if (!worker) {
-      worker = new Worker(WORKER_URL);
-      worker.onmessage = (e) => active?.(e.data);
-      worker.onerror = () => active?.({ type: 'boot-error', message: 'Could not start the Python worker.' });
-    }
-    return worker;
-  }
-  function killWorker() {
-    worker?.terminate();
-    worker = null;
-    booted = false;
-  }
-
-  /** One in-flight execution at a time; returns when the worker settles. */
-  function exec(msg: Record<string, unknown>, onOut: (t: string, err: boolean) => void): Promise<any> {
-    return new Promise((resolve) => {
-      const timer = window.setTimeout(() => {
-        active = null;
-        killWorker();
-        resolve({ type: 'timeout' });
-      }, RUN_TIMEOUT_MS);
-
-      active = (m) => {
-        if (m.type === 'ready') { booted = true; return; }
-        if (m.type === 'out') { onOut(m.text, m.stream === 'err'); return; }
-        window.clearTimeout(timer);
-        active = null;
-        resolve(m);
-      };
-      getWorker().postMessage(msg);
-    });
-  }
-
-  // ---- shared editor behaviour (Python needs real indentation) ------------
+  // ---- editor behaviour (every language here needs real indentation) -----
   function wireEditor(ta: HTMLTextAreaElement, onSubmit: () => void) {
     const autosize = () => { ta.style.height = 'auto'; ta.style.height = `${ta.scrollHeight}px`; };
     autosize();
@@ -79,35 +49,28 @@
     });
   }
 
-  // ---- problems ----------------------------------------------------------
-  function wireProblem(root: HTMLElement) {
-    const id = root.dataset.problemId!;
-    const data = JSON.parse(root.querySelector('.problem-data')!.textContent || '{}');
-    const ta = root.querySelector('.problem-editor') as HTMLTextAreaElement;
+  /** Wires one language pane of one problem. */
+  function wirePane(problemId: string, pane: HTMLElement, onSolved: () => void) {
+    const data = JSON.parse(pane.querySelector('.problem-data')!.textContent || '{}');
+    const lang: Lang = data.lang;
+    const ta = pane.querySelector('.problem-editor') as HTMLTextAreaElement;
     const starter = ta.value;
-    const out = root.querySelector('.problem-out') as HTMLElement;
-    const results = root.querySelector('.problem-results') as HTMLElement;
-    const status = root.querySelector('.problem-status') as HTMLElement;
-    const hintBox = root.querySelector('.problem-hints') as HTMLElement;
-    const solution = root.querySelector('.problem-solution') as HTMLElement;
-    const btn = (a: string) => root.querySelector(`[data-act="${a}"]`) as HTMLButtonElement;
+    const out = pane.querySelector('.problem-out') as HTMLElement;
+    const results = pane.querySelector('.problem-results') as HTMLElement;
+    const status = pane.querySelector('.problem-status') as HTMLElement;
+    const hintBox = pane.querySelector('.problem-hints') as HTMLElement;
+    const solution = pane.querySelector('.problem-solution') as HTMLElement;
+    const btn = (a: string) => pane.querySelector(`[data-act="${a}"]`) as HTMLButtonElement;
 
     let hintsShown = 0;
     wireEditor(ta, submit);
+    if (isSolved(problemId)) solution.hidden = false;
 
-    if (isSolved(id)) markSolved(false);
-
-    function markSolved(announce = true) {
-      root.classList.add('is-solved');
-      solution.hidden = false;
-      if (announce) status.textContent = 'passed';
-    }
-
-    function busy(on: boolean) {
+    const busy = (on: boolean) => {
       btn('submit').disabled = on;
       btn('run').disabled = on;
-      btn('stop').hidden = !on;
-    }
+      btn('stop').hidden = !on || isRemote(lang);
+    };
 
     function writeOut(text: string, err: boolean) {
       out.hidden = false;
@@ -117,45 +80,48 @@
       out.appendChild(span);
     }
 
-    async function run() {
+    function clear() {
       out.textContent = ''; out.hidden = true;
-      results.hidden = true; results.textContent = '';
-      busy(true);
-      status.textContent = booted ? 'running…' : 'starting Python…';
-      const r = await exec({ type: 'run', code: ta.value }, writeOut);
-      busy(false);
-      finishRun(r);
+      results.textContent = ''; results.hidden = true;
     }
 
-    function finishRun(r: any) {
-      if (r.type === 'timeout') { writeOut('⏱ stopped after 15s — infinite loop?', true); status.textContent = 'stopped'; }
-      else if (r.type === 'error') { writeOut(r.message, true); status.textContent = 'error'; }
-      else if (r.type === 'boot-error') { writeOut(`Could not load Python: ${r.message}`, true); status.textContent = 'unavailable'; }
-      else status.textContent = `ran in ${Math.max(1, Math.round(r.ms))} ms`;
+    function waiting(): string {
+      if (lang === 'cpp') return 'compiling remotely…';
+      if (lang === 'python') return 'starting Python…';
+      return 'running…';
+    }
+
+    function report(o: Outcome) {
+      if (o.kind === 'timeout') { writeOut('⏱ stopped after the time limit — infinite loop?', true); status.textContent = 'stopped'; }
+      else if (o.kind === 'error') { writeOut(o.message, true); status.textContent = 'error'; }
+      else if (o.kind === 'unavailable') { writeOut(o.message, true); status.textContent = 'unavailable'; }
+      else if (o.kind === 'ran') { status.textContent = o.ms ? `ran in ${Math.max(1, Math.round(o.ms))} ms` : 'ran'; }
+    }
+
+    async function run() {
+      clear(); busy(true); status.textContent = waiting();
+      const o = await execute({ lang, code: ta.value, onOutput: writeOut });
+      busy(false);
+      report(o);
     }
 
     async function submit() {
-      out.textContent = ''; out.hidden = true;
-      results.textContent = ''; results.hidden = true;
-      busy(true);
-      status.textContent = booted ? 'checking…' : 'starting Python…';
-
-      const r = await exec({ type: 'grade', code: ta.value, tests: data.tests }, writeOut);
+      clear(); busy(true); status.textContent = waiting();
+      const o = await execute({ lang, code: ta.value, tests: data.tests, onOutput: writeOut });
       busy(false);
 
-      if (r.type !== 'graded') {
-        recordAttempt(id, false);
-        finishRun(r);
+      if (o.kind !== 'graded') {
+        recordAttempt(problemId, false);
+        report(o);
         return;
       }
 
       results.hidden = false;
       let passed = 0;
-      for (const t of r.results) {
+      for (const t of o.results) {
         const li = document.createElement('li');
         li.className = t.ok ? 'test-row ok' : 'test-row bad';
-        li.innerHTML =
-          `<span class="test-mark">${t.ok ? '✓' : '✗'}</span><span class="test-label"></span>`;
+        li.innerHTML = `<span class="test-mark">${t.ok ? '✓' : '✗'}</span><span class="test-label"></span>`;
         (li.querySelector('.test-label') as HTMLElement).textContent = t.label;
         if (!t.ok) {
           const d = document.createElement('div');
@@ -167,52 +133,98 @@
         if (t.ok) passed++;
       }
 
-      const allPassed = r.results.length > 0 && passed === r.results.length;
-      recordAttempt(id, allPassed);
+      const allPassed = o.results.length > 0 && passed === o.results.length;
+      recordAttempt(problemId, allPassed);
       status.textContent = allPassed
-        ? `passed ${passed}/${r.results.length} in ${Math.max(1, Math.round(r.ms))} ms`
-        : `${passed}/${r.results.length} passed`;
-      if (allPassed) markSolved();
-      refreshUnit();
+        ? `passed ${passed}/${o.results.length}`
+        : `${passed}/${o.results.length} passed`;
+      if (allPassed) { solution.hidden = false; onSolved(); }
     }
 
-    root.addEventListener('click', (e) => {
+    pane.addEventListener('click', (e) => {
       const act = (e.target as HTMLElement).closest('button')?.dataset.act;
       if (act === 'submit') submit();
       else if (act === 'run') run();
-      else if (act === 'reset') { ta.value = starter; ta.dispatchEvent(new Event('input')); out.hidden = true; results.hidden = true; status.textContent = ''; }
-      else if (act === 'stop') { killWorker(); active = null; busy(false); writeOut('■ stopped', true); status.textContent = 'stopped'; }
+      else if (act === 'reset') { ta.value = starter; ta.dispatchEvent(new Event('input')); clear(); status.textContent = ''; }
+      else if (act === 'stop') { stop(lang); busy(false); writeOut('■ stopped', true); status.textContent = 'stopped'; }
       else if (act === 'hint') {
         if (hintsShown >= data.hints.length) { status.textContent = 'no more hints'; return; }
         hintBox.hidden = false;
-        const p = document.createElement('p');
-        p.textContent = data.hints[hintsShown++];
-        hintBox.appendChild(p);
+        const el = document.createElement('p');
+        el.textContent = data.hints[hintsShown++];
+        hintBox.appendChild(el);
         if (hintsShown >= data.hints.length) btn('hint').disabled = true;
       }
     });
   }
 
+  function wireProblem(root: HTMLElement) {
+    const id = root.dataset.problemId!;
+    const panes = [...root.querySelectorAll<HTMLElement>('.lang-pane')];
+    const tabs = [...root.querySelectorAll<HTMLElement>('.langtab')];
+
+    const markSolved = () => { root.classList.add('is-solved'); refreshUnit(); };
+    if (isSolved(id)) root.classList.add('is-solved');
+
+    panes.forEach((pane) => wirePane(id, pane, markSolved));
+
+    const show = (lang: string) => {
+      panes.forEach((p) => { p.hidden = p.dataset.lang !== lang; });
+      tabs.forEach((t) => t.setAttribute('aria-selected', String(t.dataset.lang === lang)));
+      // Only pay for the Python runtime if Python is actually on screen.
+      if (lang === 'python') preloadPython();
+    };
+
+    tabs.forEach((t) =>
+      t.addEventListener('click', () => {
+        const lang = t.dataset.lang!;
+        rememberLang(lang);
+        // Keep every problem on the page in step with the choice.
+        document.querySelectorAll<HTMLElement>('.problem').forEach((other) => {
+          const langs: string[] = JSON.parse(other.dataset.langs || '[]');
+          if (langs.includes(lang)) other.dispatchEvent(new CustomEvent('setlang', { detail: lang }));
+        });
+      }),
+    );
+
+    root.addEventListener('setlang', (e) => show((e as CustomEvent).detail));
+
+    const langs: string[] = JSON.parse(root.dataset.langs || '[]');
+    const want = preferredLang();
+    show(langs.includes(want) ? want : langs[0]);
+  }
+
   // ---- ladder rungs ------------------------------------------------------
   function wireRung(rung: HTMLElement) {
-    // The rung only defines a function; the ladder's shared demo is what
-    // actually exercises it, so every rung is measured on the same workload.
-    const demo = (rung.closest('.ladder') as HTMLElement)?.dataset.ladderDemo || '';
+    const ladder = rung.closest('.ladder') as HTMLElement;
+    const lang = (ladder?.dataset.ladderLang || 'python') as Lang;
+    const demo = ladder?.dataset.ladderDemo || '';
     const code = ((rung.querySelector('.rung-code') as HTMLElement).textContent || '') + '\n' + demo;
     const out = rung.querySelector('.rung-out') as HTMLElement;
     const status = rung.querySelector('.rung-status') as HTMLElement;
+
     rung.querySelector('[data-act="run-rung"]')!.addEventListener('click', async () => {
       out.hidden = false; out.textContent = '';
-      status.textContent = booted ? 'running…' : 'starting Python…';
-      const r = await exec({ type: 'run', code }, (t, err) => {
-        const s = document.createElement('span');
-        if (err) s.className = 'runner-err';
-        s.textContent = t + '\n';
-        out.appendChild(s);
+      status.textContent = lang === 'cpp' ? 'compiling remotely…' : 'running…';
+      const o = await execute({
+        lang,
+        code,
+        onOutput: (text, err) => {
+          const s = document.createElement('span');
+          if (err) s.className = 'runner-err';
+          s.textContent = text + '\n';
+          out.appendChild(s);
+        },
       });
-      if (r.type === 'timeout') { status.textContent = 'stopped at 15s'; }
-      else if (r.type === 'graded' || r.type === 'done') { status.textContent = `${Math.max(1, Math.round(r.ms))} ms`; }
-      else { status.textContent = 'error'; const s = document.createElement('span'); s.className = 'runner-err'; s.textContent = (r.message || '') + '\n'; out.appendChild(s); }
+      if (o.kind === 'ran') status.textContent = o.ms ? `${Math.max(1, Math.round(o.ms))} ms` : 'done';
+      else if (o.kind === 'timeout') status.textContent = 'stopped at the time limit';
+      else if (o.kind === 'error' || o.kind === 'unavailable') {
+        status.textContent = o.kind === 'error' ? 'error' : 'unavailable';
+        const s = document.createElement('span');
+        s.className = 'runner-err';
+        s.textContent = o.message + '\n';
+        out.appendChild(s);
+      }
     });
   }
 
@@ -247,8 +259,7 @@
     if (state === 'locked') {
       locked.hidden = false;
       const names = blockedBy({ order: unitMeta!.order, requires: unitMeta!.requires }, store);
-      const list = locked.querySelector('.locked-list') as HTMLElement;
-      list.textContent = names.map((n) => `Unit ${pad(n)}`).join(', ');
+      (locked.querySelector('.locked-list') as HTMLElement).textContent = names.map((n) => `Unit ${pad(n)}`).join(', ');
       const link = locked.querySelector('.locked-link') as HTMLAnchorElement;
       if (names.length) link.href = `${import.meta.env.BASE_URL.replace(/\/$/, '')}/learn/${pad(names[0])}`;
     } else {
@@ -259,14 +270,13 @@
     }
 
     locked.querySelector('[data-act="skip"]')?.addEventListener('click', () => {
-      // FR-5: deliberate, and recorded as skipped rather than completed.
       const names = blockedBy({ order: unitMeta!.order, requires: unitMeta!.requires }, read());
       names.forEach((n) => setUnit(pad(n), 'skipped'));
       location.reload();
     });
   }
 
-  // ---- map + review ------------------------------------------------------
+  // ---- map, inventory, review -------------------------------------------
   function paintMap() {
     const cards = document.querySelectorAll<HTMLElement>('[data-unit-card]');
     if (!cards.length) return;
@@ -293,8 +303,7 @@
     if (!rows.length) return;
     const store = read();
     rows.forEach((row) => {
-      const unit = Number(row.dataset.invUnit);
-      const s = store.units[pad(unit)]?.state;
+      const s = store.units[pad(Number(row.dataset.invUnit))]?.state;
       row.dataset.state = s === 'complete' ? 'known' : s ? 'learning' : 'locked';
     });
   }

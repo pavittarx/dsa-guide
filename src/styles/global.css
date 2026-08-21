@@ -349,3 +349,15 @@ details.pattern > summary.phead:hover h3{color:var(--accent)}
 @media (max-width:560px){
   .sec-count{margin-left:0;width:100%}
 }
+
+/* ---- language switcher ------------------------------------------------- */
+.lang-tabs{display:flex;gap:6px;flex-wrap:wrap;margin:14px 0 0}
+.langtab{
+  font-family:var(--mono);font-size:.7rem;letter-spacing:.06em;text-transform:uppercase;font-weight:700;
+  padding:5px 12px;border-radius:999px;cursor:pointer;
+  border:1px solid var(--rule);background:var(--panel-2);color:var(--muted);
+}
+.langtab:hover{color:var(--fg)}
+.langtab[aria-selected="true"]{color:var(--accent);border-color:rgba(91,157,255,.45);background:var(--panel)}
+.lang-note{margin:10px 0 0;color:var(--muted)}
+.lang-remote{margin:10px 0 0;color:var(--warn)}

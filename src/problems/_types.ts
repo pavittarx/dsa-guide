@@ -1,11 +1,25 @@
 /*
  * Types for course problems.
  *
+ * A problem states one job and carries a separate implementation per language.
+ * Python and JavaScript run in the reader's browser; C++ is compiled and run by
+ * an external service (see runners.ts), which is the only part of this site
+ * that sends anything off the machine.
+ *
  * Every problem here is authored by us (requirements FR-S2). The canonical
  * lists are used as reference for which skills matter; problem statements from
- * those platforms are copyrighted and are never copied. `source` links out so a
- * reader can go read the original and submit there.
+ * those platforms are copyrighted and are never copied.
  */
+
+export type Lang = 'python' | 'javascript' | 'cpp';
+
+export const LANGS: Lang[] = ['python', 'javascript', 'cpp'];
+
+export const LANG_LABEL: Record<Lang, string> = {
+  python: 'Python',
+  javascript: 'JavaScript',
+  cpp: 'C++',
+};
 
 export interface Rung {
   /** "brute force", "better", "optimal" */
@@ -20,33 +34,42 @@ export interface Rung {
   insight: string;
 }
 
+export interface Impl {
+  starter: string;
+  solution: string;
+  /** Assertions using the language's harness (expect / under). */
+  tests: string;
+  /** A plausible wrong approach, asserted to FAIL by `npm run verify`. */
+  wrongApproach?: string;
+  /** Present only on guided + boss problems. */
+  ladder?: Rung[];
+  /**
+   * Appended to every rung when it runs, so each approach is exercised on the
+   * SAME workload and the timings are comparable.
+   */
+  ladderDemo?: string;
+  /**
+   * Language-specific wording — e.g. C++ returns a sentinel where Python
+   * returns None. Shown under the statement when present.
+   */
+  note?: string;
+}
+
 export interface Problem {
   id: string;
   title: string;
-  /** Our words, always. */
+  /** Our words, always. Language-independent. */
   statement: string;
   source?: { name: string; url: string };
   origin?: 'blind75' | 'neetcode150' | 'grind75' | 'codeforces' | 'original';
   /** Function the tests call. */
   entry: string;
-  starter: string;
-  solution: string;
-  /** Revealed one at a time, in order. */
+  /** Revealed one at a time, in order. Language-independent. */
   hints: string[];
-  /** Python, using the harness (expect / under). */
-  tests: string;
   /** Hidden until solved when used in a transfer slot (FR-13). */
   skills: string[];
-  /** Present only on guided + boss problems. */
-  ladder?: Rung[];
-  /**
-   * Appended to every rung when it runs, so each approach is exercised on the
-   * SAME workload and the timings are actually comparable. Without this a rung
-   * only defines a function and reports nothing.
-   */
-  ladderDemo?: string;
-  /** A plausible wrong approach, asserted to FAIL the tests by `npm run verify`. */
-  wrongApproach?: string;
+  /** Python is required; the others are added as they are written. */
+  impls: { python: Impl } & Partial<Record<Lang, Impl>>;
 }
 
 export type UnitState = 'locked' | 'available' | 'in-progress' | 'complete' | 'skipped';
@@ -63,3 +86,10 @@ export interface Primitive {
   micro: string;
   pitfall: string;
 }
+
+/**
+ * The pre-multi-language shape: implementation fields sitting directly on the
+ * problem. The registry normalizes these into `impls.python`, so units written
+ * before the language switcher keep working unchanged.
+ */
+export type LegacyProblem = Omit<Problem, 'impls'> & Impl;

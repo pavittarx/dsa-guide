@@ -1,5 +1,6 @@
 ---
-import { getProblem } from '../problems';
+import { getProblem, langsOf, implOf } from '../problems';
+import { LANG_LABEL } from '../problems/_types';
 
 interface Props {
   id: string;
@@ -10,6 +11,7 @@ interface Props {
 
 const { id, kind, required = kind !== 'retrieval' } = Astro.props;
 const p = getProblem(id);
+const langs = langsOf(p);
 
 // A transfer problem must not leak what it is until it's solved (FR-13):
 // no skill tags, no "related problem" link.
@@ -28,6 +30,7 @@ const slotLabel: Record<Props['kind'], string> = {
   data-problem-id={id}
   data-required={String(required)}
   data-slot={kind}
+  data-langs={JSON.stringify(langs)}
   id={`p-${id}`}
 >
   <header class="problem-head">
@@ -45,31 +48,62 @@ const slotLabel: Record<Props['kind'], string> = {
     </p>
   )}
 
-  <textarea class="problem-editor" spellcheck="false" aria-label={`Solution for ${p.title}`}
-    >{p.starter}</textarea
-  >
+  {langs.length > 1 && (
+    <div class="lang-tabs" role="tablist">
+      {langs.map((lang, i) => (
+        <button
+          class="langtab"
+          type="button"
+          role="tab"
+          data-lang={lang}
+          aria-selected={i === 0 ? 'true' : 'false'}
+        >
+          {LANG_LABEL[lang]}
+        </button>
+      ))}
+    </div>
+  )}
 
-  <div class="problem-bar">
-    <button class="runbtn primary" type="button" data-act="submit">▸ Submit</button>
-    <button class="runbtn" type="button" data-act="run">Run</button>
-    <button class="runbtn" type="button" data-act="hint">Hint</button>
-    <button class="runbtn" type="button" data-act="reset">Reset</button>
-    <button class="runbtn danger" type="button" data-act="stop" hidden>■ Stop</button>
-    <span class="problem-status"></span>
-  </div>
+  {langs.map((lang, i) => {
+    const impl = implOf(p, lang);
+    return (
+      <div class="lang-pane" data-lang={lang} hidden={i !== 0}>
+        {impl.note && <p class="small lang-note">{impl.note}</p>}
+        {lang === 'cpp' && (
+          <p class="small lang-remote">
+            ⚠ C++ is compiled by an external service, so this code leaves your
+            browser when you run it. Python and JavaScript stay local.
+          </p>
+        )}
 
-  <div class="problem-hints" hidden></div>
-  <ol class="problem-results" hidden></ol>
-  <pre class="problem-out" tabindex="0" hidden></pre>
+        <textarea class="problem-editor" spellcheck="false" aria-label={`Solution for ${p.title}`}
+          >{impl.starter}</textarea
+        >
 
-  <details class="problem-solution" hidden>
-    <summary>Reference solution</summary>
-    <pre><code>{p.solution}</code></pre>
-  </details>
+        <div class="problem-bar">
+          <button class="runbtn primary" type="button" data-act="submit">▸ Submit</button>
+          <button class="runbtn" type="button" data-act="run">Run</button>
+          <button class="runbtn" type="button" data-act="hint">Hint</button>
+          <button class="runbtn" type="button" data-act="reset">Reset</button>
+          <button class="runbtn danger" type="button" data-act="stop" hidden>■ Stop</button>
+          <span class="problem-status"></span>
+        </div>
 
-  <script
-    type="application/json"
-    class="problem-data"
-    set:html={JSON.stringify({ tests: p.tests, hints: p.hints, entry: p.entry })}
-  />
+        <div class="problem-hints" hidden></div>
+        <ol class="problem-results" hidden></ol>
+        <pre class="problem-out" tabindex="0" hidden></pre>
+
+        <details class="problem-solution" hidden>
+          <summary>Reference solution</summary>
+          <pre><code>{impl.solution}</code></pre>
+        </details>
+
+        <script
+          type="application/json"
+          class="problem-data"
+          set:html={JSON.stringify({ tests: impl.tests, hints: p.hints, lang })}
+        />
+      </div>
+    );
+  })}
 </section>

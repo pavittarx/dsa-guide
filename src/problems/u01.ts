@@ -11,9 +11,9 @@
  * different on the page and are the same skill underneath — which is the point.
  */
 
-import type { Problem } from './_types';
+import type { LegacyProblem } from './_types';
 
-export const problems: Problem[] = [
+export const problems: LegacyProblem[] = [
   {
     id: 'u01-lookup-service',
     title: 'One query, then two hundred more',

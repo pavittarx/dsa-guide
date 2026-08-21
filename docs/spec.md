@@ -163,6 +163,27 @@ from progress: `locked`, `learning`, `known` (FR-I2, FR-I4). Available at
 reachable from every unit (FR-I1). The three-moves frame is taught in unit 00
 and used as the grouping axis everywhere (FR-I5).
 
+## 5.1 Runtimes
+
+`src/scripts/runners.ts` presents one `execute()` over three backends, so the
+UI does not care which language it is grading:
+
+| Language | Backend | Timeout |
+| --- | --- | --- |
+| `python` | `public/py-worker.js` (Pyodide) | 15 s, worker terminated |
+| `javascript` | `public/js-worker.js` | 15 s, worker terminated |
+| `cpp` | `POST https://wandbox.org/api/compile.json` | 45 s, request aborted |
+
+Each language has its own `expect`/`under` harness in `src/scripts/harnesses.ts`,
+all emitting the same `{label, ok, actual, expected}` shape. The C++ harness
+prints results after a `___RESULTS___` sentinel so they can be separated from
+the reader's own output.
+
+Wandbox specifics worth recording, both found the hard way:
+`compiler-option-raw` is **newline**-separated, not space-separated; and
+passing `options: 'warning'` puts warnings into `compiler_error`, which makes a
+clean compile look like a failure.
+
 ## 6. Grading engine
 
 `public/py-worker.js` gains one message type; the existing `run` path is

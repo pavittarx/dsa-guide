@@ -1,4 +1,4 @@
-<!DOCTYPE html><html lang="en"> <head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="description" content="Estimate what an approach costs before you write it, and know when the slow one is right."><link rel="icon" href="/dsa-guide/favicon.svg"><title>Unit 00 · Cost intuition — DSA course</title><link rel="stylesheet" href="/dsa-guide/_astro/index.B7Y8FOM9.css"></head> <body> <div class="wrap">  <nav class="unit-top"> <a href="/dsa-guide/learn">← Course map</a> <a href="/dsa-guide/#s3">Reference §3 ↗</a> </nav> <header class="unit-head"> <p class="kicker">Unit 00 · core</p> <h1>Cost intuition</h1> <p class="sub">Estimate what an approach costs before you write it, and know when the slow one is right.</p> </header> <div id="unit-root" data-unit="{&#34;order&#34;:0,&#34;requires&#34;:[],&#34;ladder&#34;:&#34;u00-flag-check&#34;,&#34;varied&#34;:[&#34;u00-first-repeat&#34;],&#34;transfer&#34;:&#34;u00-busiest-minute&#34;}"> <section id="unit-locked" hidden class="card watch"> <span class="tag">locked</span> <p>This unit builds on work you haven't finished yet: <strong class="locked-list"></strong>.</p> <p> <a class="locked-link runbtn" href="/dsa-guide/learn">Go there first</a> <button class="runbtn" type="button" data-act="skip">Skip ahead anyway</button> </p> <p class="small">
+<!DOCTYPE html><html lang="en"> <head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="description" content="Estimate what an approach costs before you write it, and know when the slow one is right."><link rel="icon" href="/dsa-guide/favicon.svg"><title>Unit 00 · Cost intuition — DSA course</title><link rel="stylesheet" href="/dsa-guide/_astro/index.h2oWxkvn.css"></head> <body> <div class="wrap">  <nav class="unit-top"> <a href="/dsa-guide/learn">← Course map</a> <a href="/dsa-guide/#s3">Reference §3 ↗</a> </nav> <header class="unit-head"> <p class="kicker">Unit 00 · core</p> <h1>Cost intuition</h1> <p class="sub">Estimate what an approach costs before you write it, and know when the slow one is right.</p> </header> <div id="unit-root" data-unit="{&#34;order&#34;:0,&#34;requires&#34;:[],&#34;ladder&#34;:&#34;u00-flag-check&#34;,&#34;varied&#34;:[&#34;u00-first-repeat&#34;],&#34;transfer&#34;:&#34;u00-busiest-minute&#34;}"> <section id="unit-locked" hidden class="card watch"> <span class="tag">locked</span> <p>This unit builds on work you haven't finished yet: <strong class="locked-list"></strong>.</p> <p> <a class="locked-link runbtn" href="/dsa-guide/learn">Go there first</a> <button class="runbtn" type="button" data-act="skip">Skip ahead anyway</button> </p> <p class="small">
 Skipping is recorded as skipped, not completed — the map will keep showing
         the difference. The reference guide is never locked.
 </p> </section> <div id="unit-body" hidden> <article class="unit-prose"> <div class="card watch">
@@ -46,7 +46,7 @@ then collect the shorthand. Never the other way round.</p>
 <h2 id="read">Read</h2>
 <p>The reference guide covers the scale table in
 <a href="/dsa-guide/#s3">§3 — Cost intuition</a>. Skim it, then come back — the code below
-is where it sticks.</p> </article> <section class="ladder" data-ladder-demo="
+is where it sticks.</p> </article> <section class="ladder" data-ladder-lang="python" data-ladder-demo="
 import time
 
 # Setup: a big list of enabled flags, and a page asking for many of them.
@@ -67,7 +67,7 @@ print(&#34;took %.3fs&#34; % elapsed)
 "><h3>How you get there</h3><p class="small">
 Every rung runs on the same workload, so the times are comparable. Start
         at the top and watch the cost, rather than taking the last one on faith.
-</p><article class="rung"><header class="rung-head"><span class="tag">1 · the innocent one-liner</span><span class="rung-cost">O(len(needed) × len(enabled))</span></header><pre class="rung-code"><code>def has_all(needed, enabled):
+ Shown in Python.</p><article class="rung"><header class="rung-head"><span class="tag">1 · the innocent one-liner</span><span class="rung-cost">O(len(needed) × len(enabled))</span></header><pre class="rung-code"><code>def has_all(needed, enabled):
     return all(flag in enabled for flag in needed)
 </code></pre><div class="rung-bar"><button class="runbtn" type="button" data-act="run-rung">
 ▸ Run
@@ -99,7 +99,7 @@ Every rung runs on the same workload, so the times are comparable. Start
     return all(flag in on for flag in needed)
 </code></pre><div class="rung-bar"><button class="runbtn" type="button" data-act="run-rung">
 ▸ Run
-</button><span class="rung-status"></span></div><pre class="rung-out" hidden></pre><p class="rung-insight">Once you can see the two loops in your head, this is the version you would write at work. Read it as: &quot;make a set, then check every flag against it.&quot; Same machine, fewer keystrokes.</p></article></section> <h2 class="slot-head">Guided</h2> <section class="problem" data-problem-id="u00-flag-check" data-required="true" data-slot="ladder" id="p-u00-flag-check"> <header class="problem-head"> <span class="tag">guided</span> <h3>The access check that got slow</h3> </header> <div class="problem-statement"> <p>A request handler checks whether every feature flag a page needs is enabled for the user. `enabled` is the list of flag names turned on for that user; `needed` is what the page asks for. Return `True` when every needed flag is enabled.</p><p>It shipped fine. Then the flag list grew, and this handler started showing up at the top of the latency graph.</p> </div>  <textarea class="problem-editor" spellcheck="false" aria-label="Solution for The access check that got slow">def has_all(needed, enabled):
+</button><span class="rung-status"></span></div><pre class="rung-out" hidden></pre><p class="rung-insight">Once you can see the two loops in your head, this is the version you would write at work. Read it as: &quot;make a set, then check every flag against it.&quot;</p></article></section> <h2 class="slot-head">Guided</h2> <section class="problem" data-problem-id="u00-flag-check" data-required="true" data-slot="ladder" data-langs="[&#34;python&#34;,&#34;javascript&#34;,&#34;cpp&#34;]" id="p-u00-flag-check"> <header class="problem-head"> <span class="tag">guided</span> <h3>The access check that got slow</h3> </header> <div class="problem-statement"> <p>A request handler checks whether every feature flag a page needs is enabled for the user. `enabled` is the list of flag names turned on for that user; `needed` is what the page asks for. Return true when every needed flag is enabled.</p><p>It shipped fine. Then the flag list grew, and this handler started showing up at the top of the latency graph.</p> </div>  <div class="lang-tabs" role="tablist"> <button class="langtab" type="button" role="tab" data-lang="python" aria-selected="true"> Python </button><button class="langtab" type="button" role="tab" data-lang="javascript" aria-selected="false"> JavaScript </button><button class="langtab" type="button" role="tab" data-lang="cpp" aria-selected="false"> C++ </button> </div> <div class="lang-pane" data-lang="python">   <textarea class="problem-editor" spellcheck="false" aria-label="Solution for The access check that got slow">def has_all(needed, enabled):
     # needed:  list of flag names this page requires
     # enabled: list of flag names turned on for this user
     ...
@@ -116,7 +116,51 @@ Every rung runs on the same workload, so the times are comparable. Start
             return False
 
     return True
-</code></pre> </details> <script type="application/json" class="problem-data">{"tests":"\nexpect(has_all([\"a\"], [\"a\", \"b\"]), True, \"flag is enabled\")\nexpect(has_all([\"z\"], [\"a\", \"b\"]), False, \"flag is missing\")\nexpect(has_all([], [\"a\"]), True, \"asking for nothing is satisfied\")\nexpect(has_all([\"a\", \"a\"], [\"a\"]), True, \"repeated request\")\nexpect(has_all([\"a\", \"z\"], [\"a\", \"b\"]), False, \"one of two missing\")\n\nbig = [\"flag-%d\" % i for i in range(120_000)]\nask = [\"flag-%d\" % i for i in range(0, 120_000, 20)]\nunder(2.5, \"stays fast on a large flag list\", lambda: has_all(ask, big))\n","hints":["What does `x in some_list` actually do? Python walks the list from the start until it finds x.","That means the check re-walks `enabled` from the beginning for every flag in `needed`.","Pay once to build something that can answer \"is this in there?\" without walking. A set does that."],"entry":"has_all"}</script> </section>  <h2 class="slot-head">Varied practice</h2> <p class="small">Different jobs on the surface. The same move underneath.</p> <section class="problem" data-problem-id="u00-first-repeat" data-required="true" data-slot="varied" id="p-u00-first-repeat"> <header class="problem-head"> <span class="tag">varied practice</span> <h3>The delivery that arrived twice</h3> </header> <div class="problem-statement"> <p>A queue consumer receives message ids and must stop the first time it sees one it has already handled. Return the first id that appears for a second time, or `None` if every id is unique.</p> </div>  <textarea class="problem-editor" spellcheck="false" aria-label="Solution for The delivery that arrived twice">def first_repeat(ids):
+</code></pre> </details> <script type="application/json" class="problem-data">{"tests":"\nexpect(has_all([\"a\"], [\"a\", \"b\"]), True, \"flag is enabled\")\nexpect(has_all([\"z\"], [\"a\", \"b\"]), False, \"flag is missing\")\nexpect(has_all([], [\"a\"]), True, \"asking for nothing is satisfied\")\nexpect(has_all([\"a\", \"a\"], [\"a\"]), True, \"repeated request\")\nexpect(has_all([\"a\", \"z\"], [\"a\", \"b\"]), False, \"one of two missing\")\n\nbig = [\"flag-%d\" % i for i in range(120_000)]\nask = [\"flag-%d\" % i for i in range(0, 120_000, 20)]\nunder(2.5, \"stays fast on a large flag list\", lambda: has_all(ask, big))\n","hints":["What does checking \"is this value in that list\" actually do? It walks the list from the start until it finds a match.","That means the check re-walks `enabled` from the beginning for every flag in `needed`.","Pay once to build something that can answer \"is this in there?\" without walking. A set does that."],"lang":"python"}</script> </div><div class="lang-pane" data-lang="javascript" hidden>   <textarea class="problem-editor" spellcheck="false" aria-label="Solution for The access check that got slow">function hasAll(needed, enabled) {
+  // needed:  array of flag names this page requires
+  // enabled: array of flag names turned on for this user
+}
+</textarea> <div class="problem-bar"> <button class="runbtn primary" type="button" data-act="submit">▸ Submit</button> <button class="runbtn" type="button" data-act="run">Run</button> <button class="runbtn" type="button" data-act="hint">Hint</button> <button class="runbtn" type="button" data-act="reset">Reset</button> <button class="runbtn danger" type="button" data-act="stop" hidden>■ Stop</button> <span class="problem-status"></span> </div> <div class="problem-hints" hidden></div> <ol class="problem-results" hidden></ol> <pre class="problem-out" tabindex="0" hidden></pre> <details class="problem-solution" hidden> <summary>Reference solution</summary> <pre><code>function hasAll(needed, enabled) {
+  // Step 1: pay once to put every enabled flag in a Set.
+  // Looking something up in a Set does not scan it.
+  const on = new Set();
+  for (const flag of enabled) {
+    on.add(flag);
+  }
+
+  // Step 2: check each needed flag against that Set.
+  for (const flag of needed) {
+    if (!on.has(flag)) {
+      return false;
+    }
+  }
+
+  return true;
+}
+</code></pre> </details> <script type="application/json" class="problem-data">{"tests":"\nexpect(hasAll([\"a\"], [\"a\", \"b\"]), true, \"flag is enabled\");\nexpect(hasAll([\"z\"], [\"a\", \"b\"]), false, \"flag is missing\");\nexpect(hasAll([], [\"a\"]), true, \"asking for nothing is satisfied\");\nexpect(hasAll([\"a\", \"a\"], [\"a\"]), true, \"repeated request\");\nexpect(hasAll([\"a\", \"z\"], [\"a\", \"b\"]), false, \"one of two missing\");\n\nconst big = [];\nfor (let i = 0; i < 120000; i++) big.push(\"flag-\" + i);\nconst ask = [];\nfor (let i = 0; i < 120000; i += 5) ask.push(\"flag-\" + i);\nunder(2.0, \"stays fast on a large flag list\", () => hasAll(ask, big));\n","hints":["What does checking \"is this value in that list\" actually do? It walks the list from the start until it finds a match.","That means the check re-walks `enabled` from the beginning for every flag in `needed`.","Pay once to build something that can answer \"is this in there?\" without walking. A set does that."],"lang":"javascript"}</script> </div><div class="lang-pane" data-lang="cpp" hidden> <p class="small lang-note">C++ suites check correctness only — the compiler runs on a shared public service, so wall-clock there is too noisy to grade against. Use the ladder to see the cost difference.</p> <p class="small lang-remote">
+⚠ C++ is compiled by an external service, so this code leaves your
+            browser when you run it. Python and JavaScript stay local.
+</p> <textarea class="problem-editor" spellcheck="false" aria-label="Solution for The access check that got slow">bool has_all(const vector&lt;string&gt;&amp; needed, const vector&lt;string&gt;&amp; enabled) {
+    // needed:  flag names this page requires
+    // enabled: flag names turned on for this user
+}
+</textarea> <div class="problem-bar"> <button class="runbtn primary" type="button" data-act="submit">▸ Submit</button> <button class="runbtn" type="button" data-act="run">Run</button> <button class="runbtn" type="button" data-act="hint">Hint</button> <button class="runbtn" type="button" data-act="reset">Reset</button> <button class="runbtn danger" type="button" data-act="stop" hidden>■ Stop</button> <span class="problem-status"></span> </div> <div class="problem-hints" hidden></div> <ol class="problem-results" hidden></ol> <pre class="problem-out" tabindex="0" hidden></pre> <details class="problem-solution" hidden> <summary>Reference solution</summary> <pre><code>bool has_all(const vector&lt;string&gt;&amp; needed, const vector&lt;string&gt;&amp; enabled) {
+    // Step 1: pay once to put every enabled flag in a hash set.
+    unordered_set&lt;string&gt; on;
+    for (const string&amp; flag : enabled) {
+        on.insert(flag);
+    }
+
+    // Step 2: check each needed flag against that set.
+    for (const string&amp; flag : needed) {
+        if (on.find(flag) == on.end()) {
+            return false;
+        }
+    }
+
+    return true;
+}
+</code></pre> </details> <script type="application/json" class="problem-data">{"tests":"\n  expect(has_all({\"a\"}, {\"a\", \"b\"}), true, \"flag is enabled\");\n  expect(has_all({\"z\"}, {\"a\", \"b\"}), false, \"flag is missing\");\n  expect(has_all({}, {\"a\"}), true, \"asking for nothing is satisfied\");\n  expect(has_all({\"a\", \"a\"}, {\"a\"}), true, \"repeated request\");\n  expect(has_all({\"a\", \"z\"}, {\"a\", \"b\"}), false, \"one of two missing\");\n","hints":["What does checking \"is this value in that list\" actually do? It walks the list from the start until it finds a match.","That means the check re-walks `enabled` from the beginning for every flag in `needed`.","Pay once to build something that can answer \"is this in there?\" without walking. A set does that."],"lang":"cpp"}</script> </div> </section>  <h2 class="slot-head">Varied practice</h2> <p class="small">Different jobs on the surface. The same move underneath.</p> <section class="problem" data-problem-id="u00-first-repeat" data-required="true" data-slot="varied" data-langs="[&#34;python&#34;,&#34;javascript&#34;,&#34;cpp&#34;]" id="p-u00-first-repeat"> <header class="problem-head"> <span class="tag">varied practice</span> <h3>The delivery that arrived twice</h3> </header> <div class="problem-statement"> <p>A queue consumer receives message ids and must stop the first time it sees one it has already handled. Return the first id that appears for a second time.</p> </div>  <div class="lang-tabs" role="tablist"> <button class="langtab" type="button" role="tab" data-lang="python" aria-selected="true"> Python </button><button class="langtab" type="button" role="tab" data-lang="javascript" aria-selected="false"> JavaScript </button><button class="langtab" type="button" role="tab" data-lang="cpp" aria-selected="false"> C++ </button> </div> <div class="lang-pane" data-lang="python"> <p class="small lang-note">Return None when every id is unique.</p>  <textarea class="problem-editor" spellcheck="false" aria-label="Solution for The delivery that arrived twice">def first_repeat(ids):
     # ids: message ids, in the order they arrived
     ...
 </textarea> <div class="problem-bar"> <button class="runbtn primary" type="button" data-act="submit">▸ Submit</button> <button class="runbtn" type="button" data-act="run">Run</button> <button class="runbtn" type="button" data-act="hint">Hint</button> <button class="runbtn" type="button" data-act="reset">Reset</button> <button class="runbtn danger" type="button" data-act="stop" hidden>■ Stop</button> <span class="problem-status"></span> </div> <div class="problem-hints" hidden></div> <ol class="problem-results" hidden></ol> <pre class="problem-out" tabindex="0" hidden></pre> <details class="problem-solution" hidden> <summary>Reference solution</summary> <pre><code>def first_repeat(ids):
@@ -129,7 +173,43 @@ Every rung runs on the same workload, so the times are comparable. Start
         seen.add(message_id)
 
     return None                    # every id was unique
-</code></pre> </details> <script type="application/json" class="problem-data">{"tests":"\nexpect(first_repeat([1, 2, 3, 2, 1]), 2, \"first repeat is 2\")\nexpect(first_repeat([1, 2, 3]), None, \"all unique\")\nexpect(first_repeat([]), None, \"empty\")\nexpect(first_repeat([\"a\", \"b\", \"a\"]), \"a\", \"works on strings\")\nexpect(first_repeat([5, 5]), 5, \"immediate repeat\")\n\nbig = list(range(150_000)) + [7]\nunder(2.0, \"stays fast on a long stream\", lambda: first_repeat(big))\n","hints":["For each message you only ever ask one question: \"have I already handled this?\"","A set answers that without scanning, and you can add to it as you go.","Check before you add — otherwise every message finds itself."],"entry":"first_repeat"}</script> </section>   <h2 class="slot-head">Transfer</h2> <p class="small">No pattern is named. Choosing it is the skill.</p> <section class="problem" data-problem-id="u00-busiest-minute" data-required="true" data-slot="transfer" id="p-u00-busiest-minute"> <header class="problem-head"> <span class="tag">transfer — pattern not named</span> <h3>Which minute hurt?</h3> </header> <div class="problem-statement"> <p>You have a list of event timestamps in seconds. Return the minute that contains the most events — a minute being `timestamp // 60`. If several tie, return the earliest.</p><p>No pattern is named for this one. Work out what the problem is really asking before you write anything.</p> </div>  <textarea class="problem-editor" spellcheck="false" aria-label="Solution for Which minute hurt?">def busiest_minute(timestamps):
+</code></pre> </details> <script type="application/json" class="problem-data">{"tests":"\nexpect(first_repeat([1, 2, 3, 2, 1]), 2, \"first repeat is 2\")\nexpect(first_repeat([1, 2, 3]), None, \"all unique\")\nexpect(first_repeat([]), None, \"empty\")\nexpect(first_repeat([5, 5]), 5, \"immediate repeat\")\n\nbig = list(range(150_000)) + [7]\nunder(2.0, \"stays fast on a long stream\", lambda: first_repeat(big))\n","hints":["For each message you only ever ask one question: \"have I already handled this?\"","A set answers that without scanning, and you can add to it as you go.","Check before you add — otherwise every message finds itself."],"lang":"python"}</script> </div><div class="lang-pane" data-lang="javascript" hidden> <p class="small lang-note">Return null when every id is unique.</p>  <textarea class="problem-editor" spellcheck="false" aria-label="Solution for The delivery that arrived twice">function firstRepeat(ids) {
+  // ids: message ids, in the order they arrived
+}
+</textarea> <div class="problem-bar"> <button class="runbtn primary" type="button" data-act="submit">▸ Submit</button> <button class="runbtn" type="button" data-act="run">Run</button> <button class="runbtn" type="button" data-act="hint">Hint</button> <button class="runbtn" type="button" data-act="reset">Reset</button> <button class="runbtn danger" type="button" data-act="stop" hidden>■ Stop</button> <span class="problem-status"></span> </div> <div class="problem-hints" hidden></div> <ol class="problem-results" hidden></ol> <pre class="problem-out" tabindex="0" hidden></pre> <details class="problem-solution" hidden> <summary>Reference solution</summary> <pre><code>function firstRepeat(ids) {
+  // Keep a record of everything handled so far.
+  const seen = new Set();
+
+  for (const messageId of ids) {
+    if (seen.has(messageId)) {
+      return messageId;      // handled this one already
+    }
+    seen.add(messageId);
+  }
+
+  return null;               // every id was unique
+}
+</code></pre> </details> <script type="application/json" class="problem-data">{"tests":"\nexpect(firstRepeat([1, 2, 3, 2, 1]), 2, \"first repeat is 2\");\nexpect(firstRepeat([1, 2, 3]), null, \"all unique\");\nexpect(firstRepeat([]), null, \"empty\");\nexpect(firstRepeat([5, 5]), 5, \"immediate repeat\");\n\nconst big = [];\nfor (let i = 0; i < 60000; i++) big.push(i);\nbig.push(7);\nunder(2.0, \"stays fast on a long stream\", () => firstRepeat(big));\n","hints":["For each message you only ever ask one question: \"have I already handled this?\"","A set answers that without scanning, and you can add to it as you go.","Check before you add — otherwise every message finds itself."],"lang":"javascript"}</script> </div><div class="lang-pane" data-lang="cpp" hidden> <p class="small lang-note">Return -1 when every id is unique. C++ suites check correctness only.</p> <p class="small lang-remote">
+⚠ C++ is compiled by an external service, so this code leaves your
+            browser when you run it. Python and JavaScript stay local.
+</p> <textarea class="problem-editor" spellcheck="false" aria-label="Solution for The delivery that arrived twice">int first_repeat(const vector&lt;int&gt;&amp; ids) {
+    // ids: message ids, in the order they arrived
+    // return -1 if every id is unique
+}
+</textarea> <div class="problem-bar"> <button class="runbtn primary" type="button" data-act="submit">▸ Submit</button> <button class="runbtn" type="button" data-act="run">Run</button> <button class="runbtn" type="button" data-act="hint">Hint</button> <button class="runbtn" type="button" data-act="reset">Reset</button> <button class="runbtn danger" type="button" data-act="stop" hidden>■ Stop</button> <span class="problem-status"></span> </div> <div class="problem-hints" hidden></div> <ol class="problem-results" hidden></ol> <pre class="problem-out" tabindex="0" hidden></pre> <details class="problem-solution" hidden> <summary>Reference solution</summary> <pre><code>int first_repeat(const vector&lt;int&gt;&amp; ids) {
+    // Keep a record of everything handled so far.
+    unordered_set&lt;int&gt; seen;
+
+    for (int message_id : ids) {
+        if (seen.find(message_id) != seen.end()) {
+            return message_id;     // handled this one already
+        }
+        seen.insert(message_id);
+    }
+
+    return -1;                     // every id was unique
+}
+</code></pre> </details> <script type="application/json" class="problem-data">{"tests":"\n  expect(first_repeat({1, 2, 3, 2, 1}), 2, \"first repeat is 2\");\n  expect(first_repeat({1, 2, 3}), -1, \"all unique\");\n  expect(first_repeat({}), -1, \"empty\");\n  expect(first_repeat({5, 5}), 5, \"immediate repeat\");\n","hints":["For each message you only ever ask one question: \"have I already handled this?\"","A set answers that without scanning, and you can add to it as you go.","Check before you add — otherwise every message finds itself."],"lang":"cpp"}</script> </div> </section>   <h2 class="slot-head">Transfer</h2> <p class="small">No pattern is named. Choosing it is the skill.</p> <section class="problem" data-problem-id="u00-busiest-minute" data-required="true" data-slot="transfer" data-langs="[&#34;python&#34;,&#34;javascript&#34;,&#34;cpp&#34;]" id="p-u00-busiest-minute"> <header class="problem-head"> <span class="tag">transfer — pattern not named</span> <h3>Which minute hurt?</h3> </header> <div class="problem-statement"> <p>You have a list of event timestamps in seconds. Return the minute that contains the most events — a minute being `timestamp / 60`, rounded down. If several tie, return the earliest.</p><p>No pattern is named for this one. Work out what the problem is really asking before you write anything.</p> </div>  <div class="lang-tabs" role="tablist"> <button class="langtab" type="button" role="tab" data-lang="python" aria-selected="true"> Python </button><button class="langtab" type="button" role="tab" data-lang="javascript" aria-selected="false"> JavaScript </button><button class="langtab" type="button" role="tab" data-lang="cpp" aria-selected="false"> C++ </button> </div> <div class="lang-pane" data-lang="python"> <p class="small lang-note">Return None when there are no events.</p>  <textarea class="problem-editor" spellcheck="false" aria-label="Solution for Which minute hurt?">def busiest_minute(timestamps):
     # timestamps: event times, in seconds
     ...
 </textarea> <div class="problem-bar"> <button class="runbtn primary" type="button" data-act="submit">▸ Submit</button> <button class="runbtn" type="button" data-act="run">Run</button> <button class="runbtn" type="button" data-act="hint">Hint</button> <button class="runbtn" type="button" data-act="reset">Reset</button> <button class="runbtn danger" type="button" data-act="stop" hidden>■ Stop</button> <span class="problem-status"></span> </div> <div class="problem-hints" hidden></div> <ol class="problem-results" hidden></ol> <pre class="problem-out" tabindex="0" hidden></pre> <details class="problem-solution" hidden> <summary>Reference solution</summary> <pre><code>def busiest_minute(timestamps):
@@ -160,6 +240,78 @@ Every rung runs on the same workload, so the times are comparable. Start
             best_minute = minute
 
     return best_minute
-</code></pre> </details> <script type="application/json" class="problem-data">{"tests":"\nexpect(busiest_minute([0, 1, 2, 61]), 0, \"minute 0 has three\")\nexpect(busiest_minute([61, 62, 0]), 1, \"minute 1 has two\")\nexpect(busiest_minute([]), None, \"no events\")\nexpect(busiest_minute([0, 60]), 0, \"tie picks the earliest\")\nexpect(busiest_minute([120, 121, 60]), 2, \"later minute can win\")\n\n# Correctness catches the wrong approach here, so this is only a guard\n# against something absurdly slow — hence the generous limit.\nbig = [i for i in range(200_000)] + [90] * 10\nunder(5.0, \"stays fast on a long day\", lambda: busiest_minute(big))\n","hints":["Every timestamp belongs to exactly one minute. What turns a timestamp into its minute?","Count per minute in one pass, then pick the winner from the counts in a second pass.","For the tie rule, only replace the current best when the count is higher, or the count is equal and the minute is earlier."],"entry":"busiest_minute"}</script> </section>  <section class="inv-panel"> <h2 class="slot-head">Added to your inventory</h2> <div class="card"> <span class="tag">remember</span> <p><strong>Hash map / set</strong> — O(1) average insert and lookup</p> <p class="small">Answer &quot;have I seen this?&quot;, &quot;how many of each?&quot;, and &quot;where is it?&quot; without re-scanning. Solves more real problems than everything else here combined.</p> </div><div class="card"> <span class="tag">remember</span> <p><strong>Counting &amp; grouping</strong> — O(n) to build</p> <p class="small">Tally occurrences or bucket items by a computed key. Turns &quot;are these anagrams&quot;, &quot;most common error&quot;, and &quot;group by shape&quot; into two lines.</p> </div> <p class="small"><a href="/dsa-guide/inventory">See the whole inventory →</a></p> </section> <div id="unit-complete" hidden class="card win"> <span class="tag">unit complete</span> <p>Everything required here passes. The next unit is unlocked.</p> <p><a class="runbtn primary" href="/dsa-guide/learn">Back to the map</a></p> </div> </div> </div> <p id="storage-notice" hidden class="small">
+</code></pre> </details> <script type="application/json" class="problem-data">{"tests":"\nexpect(busiest_minute([0, 1, 2, 61]), 0, \"minute 0 has three\")\nexpect(busiest_minute([61, 62, 0]), 1, \"minute 1 has two\")\nexpect(busiest_minute([]), None, \"no events\")\nexpect(busiest_minute([0, 60]), 0, \"tie picks the earliest\")\nexpect(busiest_minute([120, 121, 60]), 2, \"later minute can win\")\n\nbig = [i for i in range(200_000)] + [90] * 10\nunder(5.0, \"stays fast on a long day\", lambda: busiest_minute(big))\n","hints":["Every timestamp belongs to exactly one minute. What turns a timestamp into its minute?","Count per minute in one pass, then pick the winner from the counts in a second pass.","For the tie rule, only replace the current best when the count is higher, or the count is equal and the minute is earlier."],"lang":"python"}</script> </div><div class="lang-pane" data-lang="javascript" hidden> <p class="small lang-note">Return null when there are no events.</p>  <textarea class="problem-editor" spellcheck="false" aria-label="Solution for Which minute hurt?">function busiestMinute(timestamps) {
+  // timestamps: event times, in seconds
+}
+</textarea> <div class="problem-bar"> <button class="runbtn primary" type="button" data-act="submit">▸ Submit</button> <button class="runbtn" type="button" data-act="run">Run</button> <button class="runbtn" type="button" data-act="hint">Hint</button> <button class="runbtn" type="button" data-act="reset">Reset</button> <button class="runbtn danger" type="button" data-act="stop" hidden>■ Stop</button> <span class="problem-status"></span> </div> <div class="problem-hints" hidden></div> <ol class="problem-results" hidden></ol> <pre class="problem-out" tabindex="0" hidden></pre> <details class="problem-solution" hidden> <summary>Reference solution</summary> <pre><code>function busiestMinute(timestamps) {
+  if (timestamps.length === 0) {
+    return null;
+  }
+
+  // Step 1: count how many events landed in each minute.
+  const counts = new Map();
+  for (const seconds of timestamps) {
+    const minute = Math.floor(seconds / 60);
+    if (counts.has(minute)) {
+      counts.set(minute, counts.get(minute) + 1);
+    } else {
+      counts.set(minute, 1);
+    }
+  }
+
+  // Step 2: find the busiest. On a tie, keep the earlier minute.
+  let bestMinute = null;
+  let bestCount = 0;
+  for (const [minute, count] of counts) {
+    if (bestMinute === null) {
+      bestMinute = minute;
+      bestCount = count;
+    } else if (count &gt; bestCount) {
+      bestMinute = minute;
+      bestCount = count;
+    } else if (count === bestCount &amp;&amp; minute &lt; bestMinute) {
+      bestMinute = minute;
+    }
+  }
+
+  return bestMinute;
+}
+</code></pre> </details> <script type="application/json" class="problem-data">{"tests":"\nexpect(busiestMinute([0, 1, 2, 61]), 0, \"minute 0 has three\");\nexpect(busiestMinute([61, 62, 0]), 1, \"minute 1 has two\");\nexpect(busiestMinute([]), null, \"no events\");\nexpect(busiestMinute([0, 60]), 0, \"tie picks the earliest\");\nexpect(busiestMinute([120, 121, 60]), 2, \"later minute can win\");\n\nconst big = [];\nfor (let i = 0; i < 200000; i++) big.push(i);\nfor (let i = 0; i < 10; i++) big.push(90);\nunder(2.0, \"stays fast on a long day\", () => busiestMinute(big));\n","hints":["Every timestamp belongs to exactly one minute. What turns a timestamp into its minute?","Count per minute in one pass, then pick the winner from the counts in a second pass.","For the tie rule, only replace the current best when the count is higher, or the count is equal and the minute is earlier."],"lang":"javascript"}</script> </div><div class="lang-pane" data-lang="cpp" hidden> <p class="small lang-note">Return -1 when there are no events. C++ suites check correctness only.</p> <p class="small lang-remote">
+⚠ C++ is compiled by an external service, so this code leaves your
+            browser when you run it. Python and JavaScript stay local.
+</p> <textarea class="problem-editor" spellcheck="false" aria-label="Solution for Which minute hurt?">long long busiest_minute(const vector&lt;long long&gt;&amp; timestamps) {
+    // timestamps: event times, in seconds; return -1 if empty
+}
+</textarea> <div class="problem-bar"> <button class="runbtn primary" type="button" data-act="submit">▸ Submit</button> <button class="runbtn" type="button" data-act="run">Run</button> <button class="runbtn" type="button" data-act="hint">Hint</button> <button class="runbtn" type="button" data-act="reset">Reset</button> <button class="runbtn danger" type="button" data-act="stop" hidden>■ Stop</button> <span class="problem-status"></span> </div> <div class="problem-hints" hidden></div> <ol class="problem-results" hidden></ol> <pre class="problem-out" tabindex="0" hidden></pre> <details class="problem-solution" hidden> <summary>Reference solution</summary> <pre><code>long long busiest_minute(const vector&lt;long long&gt;&amp; timestamps) {
+    if (timestamps.empty()) {
+        return -1;
+    }
+
+    // Step 1: count how many events landed in each minute.
+    unordered_map&lt;long long, long long&gt; counts;
+    for (long long seconds : timestamps) {
+        long long minute = seconds / 60;
+        counts[minute] = counts[minute] + 1;
+    }
+
+    // Step 2: find the busiest. On a tie, keep the earlier minute.
+    bool have_best = false;
+    long long best_minute = 0;
+    long long best_count = 0;
+    for (const auto&amp; entry : counts) {
+        long long minute = entry.first;
+        long long count = entry.second;
+        if (!have_best || count &gt; best_count) {
+            have_best = true;
+            best_minute = minute;
+            best_count = count;
+        } else if (count == best_count &amp;&amp; minute &lt; best_minute) {
+            best_minute = minute;
+        }
+    }
+
+    return best_minute;
+}
+</code></pre> </details> <script type="application/json" class="problem-data">{"tests":"\n  expect(busiest_minute({0, 1, 2, 61}), 0LL, \"minute 0 has three\");\n  expect(busiest_minute({61, 62, 0}), 1LL, \"minute 1 has two\");\n  expect(busiest_minute({}), -1LL, \"no events\");\n  expect(busiest_minute({0, 60}), 0LL, \"tie picks the earliest\");\n  expect(busiest_minute({120, 121, 60}), 2LL, \"later minute can win\");\n","hints":["Every timestamp belongs to exactly one minute. What turns a timestamp into its minute?","Count per minute in one pass, then pick the winner from the counts in a second pass.","For the tie rule, only replace the current best when the count is higher, or the count is equal and the minute is earlier."],"lang":"cpp"}</script> </div> </section>  <section class="inv-panel"> <h2 class="slot-head">Added to your inventory</h2> <div class="card"> <span class="tag">remember</span> <p><strong>Hash map / set</strong> — O(1) average insert and lookup</p> <p class="small">Answer &quot;have I seen this?&quot;, &quot;how many of each?&quot;, and &quot;where is it?&quot; without re-scanning. Solves more real problems than everything else here combined.</p> </div><div class="card"> <span class="tag">remember</span> <p><strong>Counting &amp; grouping</strong> — O(n) to build</p> <p class="small">Tally occurrences or bucket items by a computed key. Turns &quot;are these anagrams&quot;, &quot;most common error&quot;, and &quot;group by shape&quot; into two lines.</p> </div> <p class="small"><a href="/dsa-guide/inventory">See the whole inventory →</a></p> </section> <div id="unit-complete" hidden class="card win"> <span class="tag">unit complete</span> <p>Everything required here passes. The next unit is unlocked.</p> <p><a class="runbtn primary" href="/dsa-guide/learn">Back to the map</a></p> </div> </div> </div> <p id="storage-notice" hidden class="small">
 This browser won't let the page save progress, so it will be lost when you leave.
-</p> <script type="module" src="/dsa-guide/_astro/CourseRuntime.astro_astro_type_script_index_0_lang.56apVkNv.js"></script>  </div> <script type="module" src="/dsa-guide/_astro/CodeRunner.astro_astro_type_script_index_0_lang.BdjFWucU.js"></script> </body></html>
+</p> <script type="module" src="/dsa-guide/_astro/CourseRuntime.astro_astro_type_script_index_0_lang.DiqkYc95.js"></script>  </div> <script type="module" src="/dsa-guide/_astro/CodeRunner.astro_astro_type_script_index_0_lang.BdjFWucU.js"></script> </body></html>

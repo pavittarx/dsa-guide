@@ -247,7 +247,10 @@ It is preserved, but not as a static table on a page the reader must go find:
 - **NFR-1 · Static** — Builds to static files served from the repo root by
   GitHub Pages. No server, database, or auth.
 - **NFR-2 · Privacy** — No telemetry or analytics. Progress never leaves the
-  browser. The only third-party request is the Pyodide CDN fetch.
+  browser. Third-party requests are limited to two: fetching the Pyodide
+  runtime from a CDN, and — **only when a reader submits C++** — sending that
+  code to an external compiler service (§7.1). Python and JavaScript never
+  leave the machine, and the C++ pane says so before you run it.
 - **NFR-3 · Performance** — Map, unit, and review pages render without loading
   Pyodide; the runtime loads only when a problem is opened.
 - **NFR-4 · Resilience** — If the CDN is unreachable, units still read and
@@ -261,6 +264,36 @@ It is preserved, but not as a static table on a page the reader must go find:
 - **NFR-7 · Responsive** — No horizontal overflow at 390 px.
 - **NFR-8 · Consistency** — Existing design tokens and components only.
 - **NFR-9 · Safety** — Reader code runs in a Web Worker with a hard timeout.
+
+### 7.1 Languages
+
+Problems are written in more than one language, and the runtime differs:
+
+| Language | Runs | Cost | Timing gates |
+| --- | --- | --- | --- |
+| Python | Pyodide, in a Web Worker | ~7 MB once | Yes — local, dependable |
+| JavaScript | a Web Worker | nothing to download | Yes — local, dependable |
+| C++ | Wandbox, over the network | a round trip per submit | **No** |
+
+- **FR-L1** — A problem offers only the languages it has actually been written
+  in; the switcher shows no others.
+- **FR-L2** — The chosen language is remembered and applied to every problem on
+  the page.
+- **FR-L3** — Solving a problem in any one language marks it solved. The skill
+  is the same; the syntax is not the point.
+- **FR-L4** — C++ is graded on correctness only. Wall-clock on a shared public
+  service cannot meet the 50× margin rule (§ spec 6.3), so a correct-but-slow
+  C++ answer will pass. The cost lesson is carried by the ladder, which prints
+  its own timings.
+- **FR-L5** — When the compiler service is unreachable, the C++ pane says so
+  plainly and the other languages keep working.
+- **FR-L6** — The C++ pane warns that code leaves the browser *before* the
+  reader runs anything.
+
+> **Third-party risk.** The compiler service is outside our control: Piston's
+> public API went whitelist-only in February 2026, mid-build. `runners.ts`
+> isolates this to a single function so it can be repointed, and the failure
+> mode is a clear message rather than a broken page.
 
 ## 8. Constraints
 

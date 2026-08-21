@@ -1,5 +1,6 @@
 ---
-import { getProblem } from '../problems';
+import { getProblem, langsOf, implOf } from '../problems';
+import { LANG_LABEL } from '../problems/_types';
 
 interface Props {
   id: string;
@@ -7,16 +8,21 @@ interface Props {
 
 const { id } = Astro.props;
 const p = getProblem(id);
-const rungs = p.ladder ?? [];
+
+// Show the ladder for the first language that has one.
+const lang = langsOf(p).find((l) => (p.impls[l]?.ladder?.length ?? 0) > 0);
+const impl = lang ? implOf(p, lang) : null;
+const rungs = impl?.ladder ?? [];
 ---
 
 {
-  rungs.length > 0 && (
-    <section class="ladder" data-ladder-demo={p.ladderDemo ?? ''}>
+  rungs.length > 0 && lang && (
+    <section class="ladder" data-ladder-lang={lang} data-ladder-demo={impl?.ladderDemo ?? ''}>
       <h3>How you get there</h3>
       <p class="small">
         Every rung runs on the same workload, so the times are comparable. Start
         at the top and watch the cost, rather than taking the last one on faith.
+        {langsOf(p).length > 1 && ` Shown in ${LANG_LABEL[lang]}.`}
       </p>
 
       {rungs.map((r, i) => (
