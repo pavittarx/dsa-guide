@@ -1,4 +1,4 @@
-# DSA Guide — Story Mode
+# DSA Course
 
 **Technical specification**
 Status: draft for review · Implements [requirements.md](./requirements.md)
@@ -7,388 +7,395 @@ Status: draft for review · Implements [requirements.md](./requirements.md)
 
 ## 1. Approach
 
-Story Mode is a second content collection and a second route tree inside the
-existing Astro site. It reuses what is already built — the layout, the design
-tokens, the Pyodide worker, the editor — and adds three genuinely new pieces:
+The course is a new content collection and route tree inside the existing Astro
+site. It reuses the layout, design tokens, Pyodide worker, and editor already
+built, and adds five new pieces:
 
-1. a **level content model**,
-2. a **grading engine** (the worker learns to score code, not just run it),
-3. a **progress store** in `localStorage`.
+1. a **unit + problem content model**,
+2. a **grading engine** (the worker learns to score, not just run),
+3. an **approach-ladder** component,
+4. the **Inventory** surface,
+5. a **progress + spaced-scheduling store**.
 
 Principles, in priority order:
 
-- **The guide is untouchable.** `index.html` and its behaviour do not change.
-  Story Mode is additive, and its failure modes must not reach the guide. (FR-19)
-- **Static, always.** Everything resolves at build time or in the browser. (NFR-1)
-- **The reference is never gated.** Gating exists only on `/play/*`. (FR-3)
+- **The guide is untouchable.** `index.html` and its behaviour do not change;
+  the course's failure modes must not reach it. (FR-23)
+- **Static, always.** Everything resolves at build time or in the browser.
+- **The reference is never gated.** Gating exists only under `/learn/*`. (FR-3)
 
 ## 2. File layout
 
 ```
 src/
   content/
-    guide.md                     # unchanged
-    levels/
-      01-day-one.md              # one file per level
-      02-the-postmortem.md
+    guide.md                       # unchanged
+    units/
+      00-cost-intuition.md
+      01-hashing.md
       ...
-  content.config.ts              # + levels collection & schema
-  components/
-    CodeRunner.astro             # existing; unchanged
-    Challenge.astro              # NEW graded challenge widget
-    LevelNav.astro               # NEW prev/next + back-to-map
-    CampaignMap.astro            # NEW 14-level map
-    ProgressBadge.astro          # NEW state pill
-  layouts/
-    Layout.astro                 # existing
-    LevelLayout.astro            # NEW level chrome
-  scripts/
-    demos.ts                     # existing
-    progress.ts                  # NEW localStorage store
-    gating.ts                    # NEW pure unlock logic
-    grader.ts                    # NEW client half of grading
-  challenges/
-    l02-profile-lookup.ts        # starter, solution, tests per challenge
+  problems/
+    _types.ts                      # Problem, Ladder, Test types
+    u01-lookup-service.ts          # one module per problem
     ...
+  content.config.ts                # + units collection & schema
+  components/
+    CodeRunner.astro               # existing; unchanged
+    Problem.astro                  # NEW graded problem widget
+    Ladder.astro                   # NEW approach ladder (runnable rungs)
+    Inventory.astro                # NEW toolkit surface
+    UnitMap.astro                  # NEW course map
+    ReviewQueue.astro              # NEW due-today list
+  layouts/
+    Layout.astro                   # existing
+    UnitLayout.astro               # NEW
+  scripts/
+    demos.ts                       # existing
+    progress.ts                    # NEW store (progress + schedule)
+    schedule.ts                    # NEW spaced-repetition logic
+    gating.ts                      # NEW pure unlock logic
+    grader.ts                      # NEW client half of grading
+    inventory.ts                   # NEW primitive definitions
   pages/
-    index.astro                  # unchanged
-    play/
-      index.astro                # campaign map
-      [level].astro              # a level
+    index.astro                    # unchanged (the guide)
+    learn/
+      index.astro                  # course map
+      [unit].astro                 # a unit
+    review.astro                   # return set
+    inventory.astro                # Inventory (also embedded per unit)
 public/
-  py-worker.js                   # extended with a `grade` message
-docs/
-  requirements.md
-  spec.md
+  py-worker.js                     # + `grade` message
 ```
 
 ## 3. Routing
 
 | Route | Page | Gated |
 | --- | --- | --- |
-| `/` | The guide, exactly as today | No (FR-3) |
-| `/play` | Campaign map | No |
-| `/play/01` … `/play/14` | Levels | Yes, client-side (§7) |
+| `/` | The guide, as today | No (FR-3) |
+| `/learn` | Course map | No |
+| `/learn/00` … `/learn/18` | Units | Yes, client-side (§8) |
+| `/review` | Due return-set items | No |
+| `/inventory` | The Inventory | No |
 
-All paths carry the `/dsa-guide` base. `[level].astro` uses
-`getStaticPaths()` over the `levels` collection, so every level is prerendered
-— gating is a client-side view concern, not a routing one. This matters: a
-prerendered level page means a deep link never 404s, and FR-4 can render a
-proper "locked" state with a way forward.
+Every unit is prerendered via `getStaticPaths()`, so a deep link never 404s and
+a locked unit can render a proper explanation with a route forward (FR-4).
 
-## 4. Level content model
+## 4. Content model
 
-Each level is Markdown with typed frontmatter, validated at build time.
+### 4.1 Units
 
 ```ts
-// content.config.ts
-const levels = defineCollection({
-  loader: glob({ pattern: '*.md', base: './src/content/levels' }),
+const units = defineCollection({
+  loader: glob({ pattern: '*.md', base: './src/content/units' }),
   schema: z.object({
-    order: z.number().int().min(1).max(14),   // 1..14, unique
-    title: z.string(),                         // "The postmortem"
-    kind: z.enum(['briefing', 'drill', 'gauntlet', 'debrief']),
-    section: z.string(),                       // anchor in the guide, e.g. "s2"
-    sectionTitle: z.string(),                  // "What DSA catches"
-    summary: z.string(),                       // one line, shown on the map
-    challenges: z.array(z.string()).default([]),   // challenge ids
-    requiredToPass: z.number().int().min(0).optional(), // gauntlet: k of n
+    order: z.number().int().min(0).max(18),
+    title: z.string(),
+    skill: z.string(),                       // "recognise repeated work and cache it"
+    track: z.enum(['core', 'extension']),
+    requires: z.array(z.number().int()).default([]),   // unit orders
+    guideSection: z.string().optional(),     // "s6" — the depth layer
+    incident: z.string(),                    // one-line motivation
+    ladder: z.string(),                      // problem id taught as a ladder
+    varied: z.array(z.string()).length(3),
+    retrieval: z.array(z.string()).length(2),
+    transfer: z.string(),
+    inventory: z.array(z.string()).default([]),  // primitive ids introduced
   }),
 });
 ```
 
-Body structure, in the guide's existing components:
+Unit completion (FR-6) = `ladder` + all `varied` + `transfer` passed.
+`retrieval` feeds the return set and never blocks.
 
-```markdown
-<div class="card watch">
-  <span class="tag">03:14 · pager</span>
-  <p>Checkout p99 just crossed 8 seconds...</p>
-</div>
-
-## The brief
-Read [§2 — What DSA catches](/dsa-guide/#s2), then come back.
-
-<Challenge id="l02-profile-lookup" />
-
-## Debrief
-This was Two Sum wearing a suit...
-```
-
-`kind` determines completion (FR "Level anatomy", req §5.1):
-
-| kind | Completes when |
-| --- | --- |
-| `briefing` | Reader presses **Continue** |
-| `drill` | All required tests pass on every listed challenge |
-| `gauntlet` | `requiredToPass` of `challenges` pass |
-| `debrief` | All recall prompts revealed and acknowledged |
-
-## 5. Challenge model
-
-One module per challenge, colocated and typed:
+### 4.2 Problems
 
 ```ts
-// src/challenges/l02-profile-lookup.ts
-import type { Challenge } from './types';
+export interface Problem {
+  id: string;
+  title: string;
+  statement: string;        // OUR words, always (FR-S2)
+  source?: { name: string; url: string };   // link out, never copied text
+  origin?: 'blind75' | 'neetcode150' | 'grind75' | 'codeforces' | 'original';
+  entry: string;            // function name the tests call
+  starter: string;
+  solution: string;
+  hints: string[];          // progressive, revealed one at a time
+  tests: string;            // Python, uses the harness (§6.2)
+  skills: string[];         // for the transfer slot: hidden until solved
+  ladder?: Rung[];          // present only for guided + boss problems
+}
 
-export default {
-  id: 'l02-profile-lookup',
-  title: 'Make the lookup stop scanning',
-  prompt: 'Return a list of profile names for the given ids. It must stay fast at 200,000 profiles.',
-  entry: 'lookup',                 // function the tests call
-  starter: `def lookup(ids, profiles):\n    # profiles: list of {"id": int, "name": str}\n    ...\n`,
-  solution: `def lookup(ids, profiles):\n    by_id = {p["id"]: p for p in profiles}\n    return [by_id[i]["name"] for i in ids]\n`,
-  hint: 'The inner scan re-derives the same fact every time. What could remember it?',
-  tests: `
-expect(lookup([2], [{"id": 1, "name": "a"}, {"id": 2, "name": "b"}]), ["b"], "finds one")
-expect(lookup([], [{"id": 1, "name": "a"}]), [], "empty ids")
-expect(lookup([1, 1], [{"id": 1, "name": "a"}]), ["a", "a"], "repeated ids")
-
-# Complexity gate: linear passes in milliseconds, quadratic takes minutes.
-big = [{"id": i, "name": f"n{i}"} for i in range(200_000)]
-under(2.0, "stays fast at 200k", lambda: lookup(list(range(0, 200_000, 500)), big))
-`,
-} satisfies Challenge;
+export interface Rung {
+  label: string;            // "brute force"
+  code: string;             // runnable
+  complexity: string;       // "O(n²) time, O(1) space"
+  diesAt?: string;          // "n = 100,000 → ~8 minutes"
+  insight: string;          // what repeated work the next rung removes
+}
 ```
 
-### 5.1 Complexity gates
+**FR-13 (transfer):** the unit page must not render `skills`, the source name,
+or any pattern label for the transfer problem until it is solved or revealed.
+Because everything ships to the browser this is a UI contract, not a security
+one (C-4) — the field is simply not rendered.
 
-The guide's whole thesis is about scale, so several challenges must reject a
-correct-but-quadratic answer. `under(seconds, label, fn)` asserts wall-clock.
+## 5. The Inventory
 
-Wall-clock assertions are normally flaky. They are safe here **only because the
-margin is enormous**: at n = 200,000 a hash solution runs in milliseconds and a
-nested scan runs for minutes — four or more orders of magnitude. Thresholds are
-set at ~100× the reference solution's measured time, never near it. Any gate
-whose margin is under 50× must be redesigned or dropped.
+`inventory.ts` holds the primitives, revised from the guide's §5 rather than
+copied (FR-I3):
 
-### 5.2 Test harness
+```ts
+export interface Primitive {
+  id: string;                 // "hash-map"
+  name: string;
+  cost: string;               // "O(1) average insert / lookup"
+  purpose: string;            // rewritten, starter-facing
+  move: 'remember' | 'order' | 'once' | 'structural';
+  unit: number;               // which unit teaches it
+  micro: string;              // small worked example (FR-I3)
+  pitfall: string;            // the one mistake people make
+}
+```
 
-Injected before the tests, inside the same fresh namespace:
+Rendered as a filterable table grouped by move, with per-entry state derived
+from progress: `locked`, `learning`, `known` (FR-I2, FR-I4). Available at
+`/inventory` and embedded as a collapsible panel in `UnitLayout` so it is
+reachable from every unit (FR-I1). The three-moves frame is taught in unit 00
+and used as the grouping axis everywhere (FR-I5).
+
+## 6. Grading engine
+
+`public/py-worker.js` gains one message type; the existing `run` path is
+untouched, so the guide's 17 runnable blocks are unaffected.
+
+```
+main ──▶ { type: 'grade', code, tests }
+     ◀── { type: 'out',    stream, text }
+     ◀── { type: 'graded', results[], ms }
+     ◀── { type: 'error',  message, ms }
+```
+
+### 6.1 Execution
+
+```js
+const globals = pyodide.toPy({});
+await pyodide.runPythonAsync(HARNESS + code + tests + TAIL, { globals });
+const results = JSON.parse(globals.get('_RESULTS_JSON'));
+```
+
+Reused unchanged from the existing runner: shared worker, 15 s timeout with
+terminate-and-rebuild, `Stop`, streamed stdout, fresh globals per run (NFR-9).
+
+### 6.2 Harness
 
 ```python
 import json, time
 _RESULTS = []
 
 def expect(actual, expected, label):
-    _RESULTS.append({
-        "label": label, "ok": actual == expected,
-        "actual": repr(actual)[:200], "expected": repr(expected)[:200],
-    })
+    _RESULTS.append({"label": label, "ok": actual == expected,
+                     "actual": repr(actual)[:200], "expected": repr(expected)[:200]})
 
 def under(seconds, label, fn):
-    t = time.perf_counter()
-    fn()
-    dt = time.perf_counter() - t
-    _RESULTS.append({
-        "label": label, "ok": dt < seconds,
-        "actual": f"{dt:.3f}s", "expected": f"< {seconds:.1f}s",
-    })
+    t = time.perf_counter(); fn(); dt = time.perf_counter() - t
+    _RESULTS.append({"label": label, "ok": dt < seconds,
+                     "actual": f"{dt:.3f}s", "expected": f"< {seconds:.1f}s"})
 ```
 
-The composed program is `harness + user code + tests`, ending with
-`_RESULTS_JSON = json.dumps(_RESULTS)`. Test source is never shown in the
-editor; only the reader's own code is editable.
+### 6.3 Complexity gates
 
-## 6. Grading engine
+Several problems must reject a correct-but-quadratic answer. Wall-clock
+assertions are normally flaky; they are safe here **only because the margin is
+enormous** — at n = 200,000 a hash solution runs in milliseconds and a nested
+scan runs for minutes, four or more orders of magnitude apart. Thresholds sit at
+~100× the reference solution's measured time. **Any gate with under 50× margin
+must be redesigned or dropped.**
 
-`public/py-worker.js` gains one message type. The existing `run` path is
-untouched, so the guide's 17 runnable blocks are unaffected.
+### 6.4 Ladders
 
-```
-main ──▶ { type: 'grade', code, tests }
-     ◀── { type: 'out',    stream, text }          # reader's prints, streamed
-     ◀── { type: 'graded', results[], ms }         # all tests ran
-     ◀── { type: 'error',  message, ms }           # exception before/while testing
-```
+`Ladder.astro` renders each rung as its own runnable block (reusing the existing
+runner) with its complexity and a **Run** button (FR-12). The brute-force rung
+ships with an input size large enough to be visibly slow but bounded well under
+the 15 s timeout, so it stalls rather than hanging. The rung that "dies at n"
+offers a second, larger input behind an explicit button, with a warning that it
+will hit the timeout — that *is* the lesson.
 
-Worker side, reusing the existing fresh-namespace discipline:
-
-```js
-const globals = pyodide.toPy({});
-await pyodide.runPythonAsync(HARNESS + code + TESTS_TAIL, { globals });
-const results = JSON.parse(globals.get('_RESULTS_JSON'));
-```
-
-Reused from the existing runner without change: the shared worker, the 15 s
-timeout with terminate-and-rebuild, `Stop`, streamed stdout, and per-run fresh
-globals. (NFR-9)
-
-Outcome mapping (FR-8, FR-12):
-
-| Worker reply | Shown as |
-| --- | --- |
-| `graded`, all `ok` | **Passed** — level marked complete |
-| `graded`, some `ok: false` | Per-test rows: label, expected, actual |
-| `error` | **Error** with the Python traceback, distinct from a failure |
-| timeout | **Stopped after 15 s** — likely infinite loop |
-| `boot-error` | Grading unavailable, level still readable (NFR-4) |
-
-## 7. Progress store
+## 7. Progress and scheduling
 
 ```ts
-// src/scripts/progress.ts
-const KEY = 'dsa-guide.progress';
+const KEY = 'dsa-course.progress';
 const VERSION = 1;
 
-export interface Progress {
+interface Store {
   v: number;
-  levels: Record<string, {
-    state: 'in-progress' | 'complete' | 'skipped';
-    challenges: Record<string, boolean>;  // challenge id -> passed
+  units: Record<string, { state: 'in-progress'|'complete'|'skipped'; updated: string }>;
+  problems: Record<string, {
+    solved: boolean;
     attempts: number;
-    updated: string;                      // ISO
+    box: 0 | 1 | 2 | 3;      // 0 = unsolved, 1..3 = interval index
+    dueAt: string | null;    // ISO date
+    lastAt: string;
   }>;
-  current: string;                        // e.g. "04"
 }
 ```
 
-API: `read()`, `markChallenge(levelId, challengeId, passed)`,
-`markComplete(levelId)`, `markSkipped(levelId)`, `reset()`, `subscribe(fn)`.
+### 7.1 Schedule (FR-14 – FR-18)
 
-Rules:
+Intervals: **1 day → 3 days → 7 days**, then retired.
 
-- **Versioning (FR-16).** On read: parse; if `v` is missing, unparseable, or
-  greater than `VERSION`, discard and start empty. Never throw into the UI.
-- **Storage unavailable (FR-18).** Every access is wrapped in `try/catch`.
-  On failure the store degrades to an in-memory object for the session and sets
-  a flag the UI surfaces once: *progress won't be saved in this browser*.
-- **Writes** are debounced and fire on state change only.
-- **Cross-tab**: a `storage` listener refreshes state so two open tabs agree.
-- **Reset (FR-17)** requires an explicit confirmation step.
+```ts
+const INTERVALS = [1, 3, 7];           // days, by box
+export function onSolved(p, now)  { p.box = Math.min(p.box + 1, 3); p.dueAt = addDays(now, INTERVALS[p.box - 1]); }
+export function onFailed(p, now)  { p.box = 1; p.dueAt = addDays(now, INTERVALS[0]); }
+export function due(store, now)   { /* problems with dueAt <= now, oldest first */ }
+```
+
+- Retired items (box 3, answered correctly) leave the queue permanently.
+- Overdue items simply stay due; no penalty, no streaks, no guilt (FR-18).
+- The queue never gates the spine (FR-17).
+- Dates are stored as ISO dates (not timestamps) so "due today" is stable across
+  timezones and doesn't depend on the hour of day.
+
+### 7.2 Store rules
+
+- **Versioning (FR-20)** — on read, if `v` is missing, unparseable, or newer
+  than `VERSION`, discard and start empty. Never throw into the UI.
+- **Storage denied (FR-21)** — every access wrapped in `try/catch`; degrade to
+  an in-memory object for the session and surface one notice.
+- **Cross-tab** — a `storage` listener keeps open tabs consistent.
+- **Reset (FR-22)** — explicit confirmation.
 
 ## 8. Gating
 
-Pure, testable, no DOM:
+Pure and testable, over the dependency graph rather than a linear index:
 
 ```ts
-// src/scripts/gating.ts
-export type LevelState = 'locked' | 'available' | 'in-progress' | 'complete' | 'skipped';
-
-export function stateOf(order: number, p: Progress): LevelState {
-  const rec = p.levels[pad(order)];
+export function stateOf(unit: Unit, store: Store): UnitState {
+  const rec = store.units[pad(unit.order)];
   if (rec?.state === 'complete') return 'complete';
-  if (rec?.state === 'skipped') return 'skipped';
-  if (order === 1) return rec ? 'in-progress' : 'available';
-  const prev = p.levels[pad(order - 1)]?.state;
-  const unlocked = prev === 'complete' || prev === 'skipped';
-  if (!unlocked) return 'locked';
+  if (rec?.state === 'skipped')  return 'skipped';
+  const open = unit.requires.every(r => {
+    const s = store.units[pad(r)]?.state;
+    return s === 'complete' || s === 'skipped';
+  });
+  if (!open) return 'locked';
   return rec ? 'in-progress' : 'available';
 }
 ```
 
-- Level 1 always available (FR-2).
-- `skipped` unlocks the next level, so FR-5 cannot dead-end the campaign.
-- Locked pages still render: heading, why it's locked, a link to the blocking
-  level, and the manual-skip control (FR-4, FR-5).
-- Gating never runs on `/` (FR-3).
-
-Because pages are prerendered, level state is applied after hydration. To avoid
-a flash of unlocked content, level bodies render with `hidden` and are revealed
-by the gate script on first paint; the `<noscript>` path shows the full body
-with a note that progress tracking needs JavaScript (NFR-5).
+- Unit 00 has no dependencies and is always available (FR-2).
+- `skipped` satisfies a dependency, so FR-5 cannot dead-end the graph.
+- Gating never runs on `/`, `/review`, or `/inventory` (FR-3).
+- Unit bodies render `hidden` and are revealed by the gate script on first
+  paint, avoiding a flash of unlocked content. `<noscript>` shows the body with
+  a note that progress needs JavaScript (NFR-5).
 
 ## 9. UI
 
-**Campaign map** (`/play`) — 14 cards in order, each with number, title,
-one-line summary, `kind` badge, and state pill. The suggested next level is
-visually primary. Complete levels stay clickable and replayable (FR-6).
+**Course map** (`/learn`) — units in dependency order with state, skill line,
+and the suggested next step; boss levels visually distinct. Shows a due-count
+badge linking to `/review`.
 
-**Level page** — cold open → brief → challenge → debrief, then prev/next and
-back-to-map. A persistent link to the mapped guide section sits in the header,
-satisfying FR-20 in both directions.
+**Unit page** — incident → ladder → invariant → guided → varied ×3 → failure
+modes → retrieval ×2 → transfer, in that order, with the Inventory panel and a
+link to the mapped guide section in the header.
 
-**Challenge widget** — extends the existing runner shell: editor, `Run`
-(ungraded, prints only), `Submit` (graded), `Hint`, `Reset`, and `Show
-solution` (after a pass or explicit request, FR-11). Results render as a list
-of test rows, not a single verdict.
+**Problem widget** — extends the existing runner shell: editor, `Run`
+(ungraded), `Submit` (graded), progressive `Hint`, `Reset`, `Show solution`
+(after pass or explicit request, FR-10). Results render as per-test rows with
+input, expected, and actual (FR-9) — never a bare verdict.
 
-New styles follow the existing token set — no new colours. Reuses
-`.runner`, `.runbtn`, `.card`, `.tag`, `.pill`; adds `.level-*`, `.map-*`, and
-`.test-row` with `--good` / `--danger` for pass and fail.
+**Review** (`/review`) — due items grouped by unit, each opening the problem in
+place; answering advances or resets its box.
 
-**Accessibility (NFR-6).** Results land in an `aria-live="polite"` region so a
-screen reader hears the verdict. Test rows carry a text status, never colour
-alone. The editor is reachable and escapable by keyboard (already true of the
-existing runner). Map cards are real links; locked ones use `aria-disabled`
-with an explanation, not `pointer-events: none`.
+Styling uses existing tokens only (NFR-8): `.card`, `.tag`, `.pill`, `.runner`,
+`.runbtn`, plus new `.unit-*`, `.ladder-*`, `.inv-*`, `.test-row` using
+`--good` / `--danger`.
+
+**Accessibility (NFR-6)** — results in an `aria-live="polite"` region; test rows
+carry text status, never colour alone; map cards are real links with
+`aria-disabled` and an explanation when locked, not `pointer-events: none`.
 
 ## 10. Edge cases
 
 | Case | Behaviour |
 | --- | --- |
-| Deep link to a locked level | Renders locked state with a route forward (FR-4) |
-| Deep link to an unknown level | Astro 404 |
-| Progress cleared mid-session | Store re-reads empty; UI re-gates without reload |
-| Reader edits code to `return True` for everything | Tests use real inputs, so this fails; not a security concern (NG1, C-4) |
-| Infinite loop in submitted code | 15 s terminate; attempt counted; no crash |
-| CDN unreachable | Level readable, challenge disabled with explanation (NFR-4) |
+| Deep link to a locked unit | Locked state with a route forward (FR-4) |
+| Dependency satisfied by a skip | Unit opens; map shows the skip honestly |
+| Progress cleared mid-session | Re-reads empty and re-gates without reload |
+| Clock skew / device date changed | Schedule uses dates only; a wrong clock at worst surfaces items early |
+| Ladder brute-force rung times out | Expected on the oversized input; framed as the lesson (§6.4) |
+| CDN unreachable | Units readable, grading disabled with explanation (NFR-4) |
+| Transfer problem's skill leaked via DOM | Field not rendered at all until solved (§4.2) |
 | Two tabs open | `storage` event keeps both in sync |
-| Reader completes out of order via skip | `skipped` recorded distinctly; map shows it honestly |
 
 ## 11. Build and deploy
 
-No change to the pipeline. `npm run build` runs `astro build` then
-`scripts/publish-root.mjs`, which copies `dist/` to the repo root; Pages serves
-from `main` / root. Story Mode adds `play/index.html` and
-`play/01..14/index.html` plus one JS bundle.
+No pipeline change. `npm run build` runs `astro build` then
+`scripts/publish-root.mjs`, copying `dist/` to the repo root; Pages serves from
+`main` / root. The course adds `learn/`, `review/`, and `inventory/` pages plus
+one JS bundle (target: **under ~20 KB gzipped**). Pyodide stays lazy and is
+never fetched by `/`, `/learn`, `/review`, or `/inventory` (NFR-3).
 
-Budget: the campaign JS (progress, gating, grading client) should stay under
-~15 KB gzipped. Pyodide remains lazy and is never fetched by `/` or `/play`
-(NFR-3).
-
-**C-1 reminder:** built output is committed. Run `npm run build` before every
-commit that touches `src/`.
+**C-1 reminder:** built output is committed — run `npm run build` before any
+commit touching `src/`.
 
 ## 12. Testing
 
-- **Unit** — `gating.ts` state table across all 14 levels × every progress
-  shape; `progress.ts` versioning, corruption, and storage-denied paths.
-- **Content** — a build-time check that `order` values are 1–14 and unique,
-  every `section` anchor exists in `guide.md`, and every id in `challenges`
-  resolves to a module.
-- **Challenge integrity (S2)** — for each challenge, run its `solution` against
-  its `tests` and require all pass; run at least one recorded wrong approach and
-  require failure. This runs in Node against Pyodide, not in CI (C-1), as a
-  local `npm run verify`.
-- **End-to-end** — Playwright, as used throughout this project: complete a
-  level, assert the next unlocks; reload and assert progress survived; submit a
-  wrong answer and assert per-test feedback; deep-link a locked level; run with
-  `localStorage` blocked.
-- **Regression** — the guide's existing DOM checks (component counts, no
-  `pre` inside `code`, zero horizontal overflow at 390 px) must still pass.
+- **Unit** — `gating.ts` across the dependency graph and every progress shape;
+  `schedule.ts` box transitions, due calculation, and a simulated 7-day clock
+  (S4); `progress.ts` versioning, corruption, and storage-denied paths.
+- **Content** — build-time checks that `order` values are unique, `requires`
+  references exist and are acyclic, every problem id resolves, `varied` has
+  exactly 3 and `retrieval` exactly 2, and every `guideSection` anchor exists.
+- **Problem integrity (S2, S3)** — `npm run verify` runs each problem's
+  `solution` against its own `tests` (all must pass), a recorded wrong approach
+  (must fail), and each ladder's brute rung at its stated n (must exceed the
+  gate). Runs locally against Pyodide, since there is no CI (C-1).
+- **End-to-end** — Playwright: complete a unit and assert its dependents
+  unlock; reload and assert progress survived; submit a wrong answer and assert
+  per-test feedback; deep-link a locked unit; run with `localStorage` blocked;
+  assert the transfer problem leaks no skill label pre-solve.
+- **Regression** — the guide's existing DOM checks (component counts, no `pre`
+  inside `code`, zero overflow at 390 px) must still pass.
 
 ## 13. Delivery phases
 
 | Phase | Scope | Done when |
 | --- | --- | --- |
-| **1 — Skeleton** | Collection, routes, map, progress store, gating, `briefing` completion. No grading. | Levels 01–14 exist as stubs; unlock chain works and survives reload |
-| **2 — Grading** | Worker `grade` path, harness, `Challenge.astro`, three real drills (02, 03, 09) | Three levels completable by passing tests; wrong answers explain themselves |
-| **3 — Content** | Remaining drills, §6 gauntlet, debrief | All 14 levels completable (S1) |
-| **4 — Polish** | Accessibility pass, reduced motion, 390 px pass, copy edit | NFR-6/7 verified; S3 met |
+| **1 — Engine** | Collections, routes, map, progress + schedule store, gating, `Problem.astro`, worker `grade` path | One throwaway unit is completable; unlock and reload work |
+| **2 — Prove the loop** | Units 00–02 complete: 3 ladders, 21 problems, Inventory v1 | S1 met on 00–02; `npm run verify` green |
+| **3 — Core spine** | Units 03–14 + B1–B4 | All core units completable |
+| **4 — Polish** | Accessibility, reduced motion, 390 px, copy pass | NFR-6/7 verified |
+| **5 — Extension** | Units 15–18 (v2) | Deferred; confirm via OQ-4 |
 
-Phase 1 is deliberately shippable on its own: a working campaign shell over the
-existing guide, with no grading, is already useful — and it de-risks the rest.
+Phase 2 is the real decision point: three units built end to end will show
+whether the seven-slot loop is worth ~105 problems before we commit to writing
+them.
 
 ## 14. Traceability
 
 | Requirement | Where |
 | --- | --- |
-| FR-1, FR-2, FR-6 | §8 gating, §9 map |
-| FR-3, FR-19 | §1 principles, §3 routing, §8 |
-| FR-4, FR-5 | §8 locked rendering, `skipped` state |
-| FR-7 – FR-13 | §5 challenges, §6 grading |
-| FR-14 – FR-18 | §7 progress store |
-| FR-20, FR-21 | §9 level header, map `current` |
+| FR-1 – FR-7 | §8 gating, §9 map |
+| FR-8 – FR-13 | §4.2 problems, §6 grading, §6.4 ladders |
+| FR-14 – FR-18 | §7.1 schedule |
+| FR-19 – FR-23 | §7.2 store, §1 principles |
+| FR-I1 – FR-I5 | §5 Inventory |
+| FR-S1 – FR-S5 | §4.2 `Problem.statement` / `source` / `origin` |
 | NFR-1, C-1 | §11 build |
-| NFR-3, NFR-4, NFR-9 | §6 grading, §11 budget |
+| NFR-3, NFR-4, NFR-9 | §6, §11 |
 | NFR-5, NFR-6 | §8 noscript, §9 accessibility |
+| NFR-2 | §7 store (local only), §11 (no analytics added) |
+| NFR-7, NFR-8 | §9 styling, §12 regression checks |
 
 ## 15. Open items
 
-Inherited from requirements and unresolved here: **OQ-1** (confirm the manual
-skip in FR-5 — it shapes §8), **OQ-2** (§6 as one gauntlet or eight levels —
-shapes the collection), **OQ-3**, **OQ-4**, **OQ-5**.
+Inherited and unresolved: **OQ-1** (confirm manual skip — shapes §8),
+**OQ-2** (retrieval slots hand-picked vs drawn from the return set — shapes
+§4.1), **OQ-3** (course at `/learn` vs at the root), **OQ-4** (extension track),
+**OQ-5** (ladders gated or freely browsable — shapes §6.4).
 
-Spec-local: the `debrief` completion rule for level 14 is the least defined
-part of §4 and should be settled before Phase 3.
+Spec-local: the exact input sizes for each complexity gate are set per problem
+during Phase 2 and recorded alongside the measured reference time, so the 50×
+margin rule in §6.3 can be checked mechanically.

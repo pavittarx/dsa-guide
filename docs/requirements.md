@@ -1,238 +1,316 @@
-# DSA Guide — Story Mode
+# DSA Course
 
 **Requirements**
 Status: draft for review · Owner: pavittarx · Last updated: 2026-08-21
+Supersedes the "Story Mode" draft, which mapped levels 1:1 onto the guide's
+sections and therefore inherited the structural problem described below.
 
 ---
 
 ## 1. Problem
 
-The guide is good at teaching and bad at making people *practise*. It says so
-itself: "Reading it end to end will feel productive and teach you almost
-nothing." It already builds in prediction prompts, hidden self-tests, and a
-spaced-repetition nudge — but nothing verifies any of it happened. A reader can
-scroll to the end in forty minutes, feel informed, and retain nothing. That is
-the exact failure the guide warns about, and today the page has no mechanism to
-prevent it.
+The existing guide is a **reference**, and it is a good one. It is not a course,
+and using it as one fails in five specific ways:
 
-Meanwhile the site now runs real Python in the browser. The missing piece is a
-reason to use it: a structure that asks the reader to *do* something, checks
-whether it worked, and remembers.
+- **Nothing builds.** Sections are organized by topic, not by dependency. You
+  can read them in almost any order, which means none of them require the last.
+- **Nothing remains.** §1 tells the reader to come back on day 3 and day 7. The
+  page does nothing to make that happen.
+- **Practice is one-shot.** §6 is **24% of the guide**, contains **all eight
+  patterns**, and carries **eight self-tests — one per pattern**. One item is
+  enough to recognise a skill you already have, not to acquire one.
+- **No composition.** Every worked example is single-pattern. The only composite
+  problem in the guide (Subarray Sum Equals K) appears as a parenthetical in a
+  problem list and is never taught.
+- **No transfer.** §7's trigger table names the pattern for you. Choosing the
+  pattern when nothing is labelled is the actual skill, and it is never trained.
+
+The result reads as a top-level reference for a veteran rather than a path for
+someone starting out.
 
 ## 2. What we're building
 
-A **campaign** layered over the existing guide. The reader plays an engineer
-who has just joined a company; each level is an incident, a ticket, or a code
-review where the wrong data structure is quietly costing money. The teaching
-material is the reference manual they consult to survive the shift.
+A **course**: a dependency-ordered spine of units, each teaching one skill,
+each practised in varied forms, with earlier material deliberately resurfaced.
+Problems are drawn from the canonical lists (Blind 75, NeetCode 150, Grind 75,
+with Codeforces for stretch), and each unit's core problem is taught as an
+**approach ladder** — brute force first, then what's wrong with it, then better,
+then optimal — never as a finished answer.
 
-The guide keeps working exactly as it does today. Story Mode is additive.
+The existing guide's material is an asset, not a casualty: its explanations,
+invariants, gotchas, and case studies are **reused as the depth layer** the
+course links into. Reuse means adapt: material may be rewritten, expanded, or
+resequenced wherever it is too terse for a starter — nothing needs to be carried
+over verbatim. Restructuring the guide page itself is deferred; it stays live
+and unchanged for now.
+
+Two pieces of it are explicitly **promoted, not merely linked** — the §5
+toolkit table and the §4 "three moves" frame. They are the best overview in the
+guide and the course embeds them as a live surface (§4.3) rather than leaving
+them behind on a page the reader has to go find.
+
+Narrative framing (the on-call engineer) sits on top as motivation for each
+unit, subordinate to the pedagogy.
 
 ## 3. Goals
 
-- **G1** — Convert passive reading into verified practice: the reader writes or
-  fixes code and something checks it.
-- **G2** — Give the material a spine, so "where am I / what's next" is always
-  answerable.
-- **G3** — Preserve the guide's credibility. The audience is working engineers
-  and interview candidates; the fiction must never make the content feel junior.
-- **G4** — Stay a static site. No server, no accounts, no running costs.
-- **G5** — Never trap a learner. Someone who is stuck must always be able to
-  reach the teaching material.
+- **G1 · Builds** — Units form a dependency chain. Each unit requires the last.
+- **G2 · Remains** — Retention is a mechanism, not an instruction: solved work
+  returns on a schedule.
+- **G3 · Varies** — Every skill is met in several superficially different
+  problems, so the reader learns the deep structure rather than a template.
+- **G4 · Composes** — Boss levels require two or more skills at once.
+- **G5 · Transfers** — Every unit ends with a problem whose pattern is not named.
+- **G6 · Derives** — Solutions are built from a slow version, never presented
+  finished.
+- **G7** — Stay static and free to run (no server, no accounts).
+- **G8** — Never trap a learner; the reference is always reachable.
 
 ### Non-goals
 
-- **NG1** — Not an assessment tool. No proctoring, no anti-cheat, no scores that
-  claim to measure competence. Test code ships to the browser and is readable;
-  that is acceptable (§8, C-4).
-- **NG2** — Not a replacement for LeetCode-style volume practice. The campaign
-  teaches *recognition and judgement*; grinding problems happens elsewhere.
-- **NG3** — Not multiplayer, social, or leaderboard-driven.
-- **NG4** — Not a rewrite of the guide's prose.
+- **NG1** — Not an assessment tool. Tests ship to the browser and are readable;
+  acceptable (C-4).
+- **NG2** — Not a replacement for volume practice on the original platforms. We
+  teach recognition, derivation, and judgement, then send the reader there.
+- **NG3** — Not a rewrite of the guide (deferred, §2).
+- **NG4** — Not multiplayer, social, or leaderboard-driven.
 
-## 4. Audience
+## 4. The spine
 
-| Reader | Arrives wanting | Story Mode must |
+Nineteen units in dependency order, plus four boss levels. **Core (v1)** is
+units 00–14 and B1–B4; the **extension track** is v2.
+
+| # | Unit | Requires |
 | --- | --- | --- |
-| **Interview candidate** | Pattern fluency under time pressure | Provide graded drills with visible progress |
-| **Working engineer** | To stop shipping accidental O(n²) | Frame everything in production terms, allow topic-jumping |
-| **Returning reader** | The one thing they forgot | Never gate the reference; make §14 reachable in one click |
+| 00 | Cost intuition — measure it, feel the scale table | — |
+| 01 | Hashing & counting | 00 |
+| 02 | Two pointers | 01 |
+| 03 | Sliding window: fixed → variable | 02 |
+| 04 | Prefix sums | 01 |
+| **B1** | **Boss — Subarray Sum = K · Minimum Window Substring** | 01–04 |
+| 05 | Binary search on arrays | 00 |
+| 06 | Binary search **on the answer** (a separate skill) | 05 |
+| 07 | Stacks → monotonic stack | 03 |
+| 08 | Heaps & top-k | 01 |
+| **B2** | **Boss — Sliding Window Maximum · Top-K Frequent** | 05–08 |
+| 09 | Linked lists | 02 |
+| 10 | Trees & traversal | 09 |
+| 11 | Graphs: BFS | 10 |
+| 12 | DFS & topological sort | 11 |
+| **B3** | **Boss — Course Schedule II · Word Ladder** | 09–12 |
+| 13 | DP: memoisation (top-down) | 01 |
+| 14 | DP: tabulation, 2-D, space reduction | 13 |
+| **B4** | **Capstone — LRU Cache (hash + linked list)** | all core |
+| 15 | Intervals | 02 |
+| 16 | Backtracking | 12 |
+| 17 | Tries & union-find | 12 |
+| 18 | Greedy & bit manipulation | 14 |
 
-## 5. Structure
+> Splitting **binary search on the answer** (06) from binary search (05) is
+> deliberate: the guide already notes it is "the technique worth real study" and
+> that most people meet it as a magic trick. It needs its own unit.
 
-### 5.1 Fourteen levels, one per section
+### 4.1 The unit loop
 
-Level *N* maps 1:1 to guide section *N*. The sections differ wildly in shape, so
-levels are **typed** rather than split or merged:
+Every unit runs the same seven slots. Slots 5, 7, and 8 are the ones absent
+from the guide today.
 
-| Type | Completion | Used for |
-| --- | --- | --- |
-| `briefing` | Read and acknowledge | Framing material with nothing to execute |
-| `drill` | Pass the challenge's tests | Standard teaching level |
-| `gauntlet` | Pass *k* of *n* sub-challenges | §6, which holds all eight patterns |
-| `debrief` | Answer recall prompts | Consolidation |
+| Slot | Content |
+| --- | --- |
+| 1 · Motivate | The incident this skill would have prevented |
+| 2 · Derive | The approach ladder (§4.2) — brute → optimal |
+| 3 · Invariant | What stays true each iteration (reused from the guide) |
+| 4 · Guided | One problem with hints available |
+| 5 · **Varied** | **3 problems that look different, same skill** |
+| 6 · Failure modes | The bugs specific to this skill, placed where they bite |
+| 7 · **Retrieval** | **2 problems from earlier units** |
+| 8 · **Transfer** | **1 problem with no pattern named** |
 
-| # | Section | Level title | Type |
-| --- | --- | --- | --- |
-| 01 | How to read this | Day one | `briefing` |
-| 02 | What DSA catches | The postmortem | `drill` |
-| 03 | Cost intuition | Back-of-envelope | `drill` |
-| 04 | The three moves | Three tools on the belt | `drill` |
-| 05 | The toolkit | Inventory | `drill` |
-| 06 | The eight patterns | The gauntlet | `gauntlet` |
-| 07 | Trigger table | Triage | `drill` |
-| 08 | Gotchas | Landmines | `drill` |
-| 09 | Case studies | Three incidents | `drill` |
-| 10 | Reviewing AI's code | Review duty | `drill` |
-| 11 | AI as tutor | Pairing | `briefing` |
-| 12 | Six-week plan | The rotation | `briefing` |
-| 13 | The interview | The panel | `drill` |
-| 14 | Recall card | The runbook | `debrief` |
+Seven practice problems per unit → **≈105 for the core track**, plus boss levels.
 
-> **Note on §6.** It is roughly a third of the guide and carries all eight
-> patterns. As one level it is far heavier than any other. It is modelled as a
-> `gauntlet` with eight independently-tracked sub-challenges and its own
-> internal progress, so a reader can leave and return mid-level. If it proves
-> unwieldy in practice, splitting it into 06a–06h is the first thing to
-> reconsider — flagged as **OQ-2**.
+### 4.2 Approach ladders
 
-### 5.2 Level anatomy
+The **guided** problem in each unit and every boss problem are taught as a
+ladder. Varied, retrieval, and transfer problems get a single reference
+solution plus hints — laddering all 105 would be unreasonable and unnecessary.
+That is ~19 ladders in the core track.
 
-1. **Cold open** — the incident, rendered with the guide's existing
-   `.card` + `.tag` callout (no new component).
-2. **Briefing** — what to go learn, linking into the reference section.
-3. **Challenge** — starter code in the existing runner, graded against tests.
-4. **Debrief** — what the level was really teaching, and the pattern name.
+Each rung is runnable and timed in the browser, so the cost difference is
+observed rather than asserted:
+
+| Rung | Must include |
+| --- | --- |
+| Brute force | Working code, its complexity, and the n at which it dies |
+| Why it fails | The specific repeated work, named |
+| Better | The intermediate step, where one exists |
+| Optimal | The final approach and what it traded (usually memory) |
+| When brute wins | The n below which the simple version is the right answer |
+
+That last rung matters: the guide is already clear that a bounded, small n makes
+the nested loop the correct engineering choice, and the course must not train
+readers out of that judgement.
+
+### 4.3 The Inventory (promoted from §4–§5)
+
+The guide's toolkit table — eleven primitives with their cost, their purpose,
+and which of the three moves they serve — is the single best overview it has.
+It is preserved, but not as a static table on a page the reader must go find:
+
+- **FR-I1** — An **Inventory** surface is reachable from every unit and from the
+  course map, listing each primitive with cost, what it's actually for, and its
+  move (`remember` / `order` / `once` / `structural`).
+- **FR-I2** — Each entry links to the unit that teaches it and shows the
+  reader's state for that unit, so the overview doubles as a progress view.
+- **FR-I3** — Entries are **revised, not copied**. A table row cannot teach a
+  heap; each entry carries a worked micro-example and the one mistake people
+  make with it. Wording may be rewritten freely wherever the guide's version is
+  too terse for a starter.
+- **FR-I4** — Entries for unlocked skills are presented as available tools;
+  locked ones are visible but marked, so the reader can always see the shape of
+  what's coming.
+- **FR-I5** — The "three moves" frame (`remember`, `order`, `once`) is the
+  Inventory's organising axis and is taught in unit 00, not left as a late
+  section.
+
+## 5. Problem sourcing
+
+- **FR-S1** — The canonical lists (Blind 75, NeetCode 150, Grind 75, with
+  Codeforces for stretch) are used **as reference for which skills and problem
+  shapes matter** — not as a set to reproduce.
+- **FR-S2** — **We author our own problems.** Statements from LeetCode,
+  Codeforces, and similar platforms are copyrighted and are never copied.
+  Following a curated list of problem *titles* is fine; reproducing problem
+  *text* is not. Where a canonical problem is the clearest vehicle for a skill,
+  we write our own statement for it — usually recast into the course's
+  production framing (a rate limiter, a lookup service) rather than an abstract
+  array puzzle.
+- **FR-S3** — Every problem links out to its canonical source so the reader can
+  read the original statement and submit there.
+- **FR-S4** — All test cases are authored by us.
+- **FR-S5** — Codeforces items are marked as such: different I/O conventions and
+  a heavier math/ad-hoc skew make them useful for "no pattern named" practice
+  and poor as a unit's first exposure.
 
 ## 6. Functional requirements
 
 ### Progression
 
-- **FR-1** — The campaign presents 14 levels in fixed order.
-- **FR-2** — Level 1 is always unlocked. Level *N* unlocks when level *N−1* is
-  complete.
-- **FR-3** — The reference guide is **never** gated. Every section is reachable
-  at any time, directly and from any level, with no completion check.
-- **FR-4** — A locked level shows what unlocks it and links to the level that
-  does, rather than 404ing or silently redirecting.
-- **FR-5** — A stuck reader can unlock the next level manually, from the locked
-  level's own page, without clearing progress. The action is deliberate and
-  labelled as skipping, and the level is recorded as `skipped`, not `completed`.
-  *Rationale: G5. Hard gating's failure mode is a wall; this keeps the ordering
-  meaningful without letting one bad challenge end the campaign.* — **confirm**
-- **FR-6** — A campaign map shows every level with state: `locked`, `available`,
-  `in progress`, `complete`, `skipped`, and marks the suggested next level.
+- **FR-1** — Units are presented in the order in §4 with their stated
+  dependencies.
+- **FR-2** — Unit 00 is always available. Unit *N* unlocks when its dependencies
+  are complete.
+- **FR-3** — The reference guide is **never** gated (G8).
+- **FR-4** — A locked unit renders an explanation and a link to what unlocks it.
+- **FR-5** — A stuck reader can unlock the next unit manually from the locked
+  page. It is recorded as `skipped`, not `completed`. — **confirm**
+- **FR-6** — A unit completes when its guided problem, all varied problems, and
+  its transfer problem pass. Retrieval problems count toward the return set, not
+  toward unit completion.
+- **FR-7** — A course map shows every unit's state and the suggested next step.
 
-### Challenges
+### Practice
 
-- **FR-7** — A challenge presents starter code in the existing editor and runs
-  it against test cases in Pyodide.
-- **FR-8** — Results report per-test pass/fail with the failing input, the
-  expected value, and the actual value. A bare "wrong" is not acceptable.
-- **FR-9** — A challenge passes only when every required test passes. Passing
-  marks the level complete.
-- **FR-10** — Attempts are unlimited and counted. Counting must never be framed
-  punitively.
-- **FR-11** — A hint is available on demand, and the worked solution after
-  either a pass or an explicit "show me" — never auto-revealed on failure.
-- **FR-12** — Runtime errors (syntax, exception, timeout) are reported as
-  outcomes with the traceback, distinct from test failures.
-- **FR-13** — `gauntlet` sub-challenges are tracked and resumable individually.
+- **FR-8** — Problems run and are graded in the browser (existing Pyodide
+  runner).
+- **FR-9** — Failures report the failing input, expected, and actual per test.
+- **FR-10** — Hints are available on demand; solutions only after a pass or an
+  explicit request.
+- **FR-11** — Attempts are counted, never framed punitively.
+- **FR-12** — Approach-ladder rungs are individually runnable and timed, so the
+  reader sees brute force die at scale rather than being told it does.
+- **FR-13** — Transfer problems display no pattern name, no unit tag, and no
+  trigger-table hint until solved or revealed.
+
+### Retention
+
+- **FR-14** — A solved problem enters the **return set**, scheduled at ~1, 3,
+  and 7 days.
+- **FR-15** — A `/review` surface lists what is due, with counts.
+- **FR-16** — Answering a returned problem correctly advances its interval;
+  failing it resets to the first interval.
+- **FR-17** — The return set never blocks progression through the spine.
+- **FR-18** — Overdue items accumulate without penalty or guilt framing.
 
 ### Progress
 
-- **FR-14** — Progress persists in `localStorage` on the reader's device.
-- **FR-15** — Progress survives reload, navigation, and site redeploys.
-- **FR-16** — Progress is versioned and migrated forward; an unreadable or
-  future-versioned record resets to empty rather than throwing.
-- **FR-17** — The reader can reset all progress, behind a confirmation.
-- **FR-18** — With `localStorage` unavailable (private mode, blocked storage),
-  the campaign still runs for the session and says progress won't be saved.
-- **FR-19** — The guide's existing behaviour is unchanged when Story Mode is
+- **FR-19** — Progress and scheduling persist in `localStorage`.
+- **FR-20** — The store is versioned; unreadable or future-versioned data resets
+  to empty rather than throwing.
+- **FR-21** — With storage unavailable, the course runs for the session and says
+  progress won't be saved.
+- **FR-22** — Progress can be reset behind a confirmation.
+- **FR-23** — The guide's existing behaviour is unchanged when the course is
   never opened.
-
-### Entry points
-
-- **FR-20** — The guide links to the campaign, and each level links back to its
-  section. Neither is a dead end.
-- **FR-21** — Returning readers land on their current level from the campaign
-  entry point.
 
 ## 7. Non-functional requirements
 
 - **NFR-1 · Static** — Builds to static files served from the repo root by
-  GitHub Pages. No server, database, or auth. (G4)
-- **NFR-2 · Privacy** — No telemetry, no analytics, no network calls carrying
-  reader data. Progress never leaves the browser. The only third-party request
-  is the Pyodide CDN fetch.
-- **NFR-3 · Performance** — The campaign map and level pages must render without
-  loading Pyodide. The runtime loads only when a reader opens a challenge.
-- **NFR-4 · Resilience** — If the Pyodide CDN is unreachable, levels still read
-  and the challenge explains that grading is unavailable.
-- **NFR-5 · Progressive enhancement** — The reference guide must render and be
-  fully readable with JavaScript disabled. Story Mode may require JavaScript;
-  it must say so rather than render blank.
-- **NFR-6 · Accessibility** — Keyboard-operable throughout; visible focus;
-  pass/fail announced to assistive technology; honours
-  `prefers-reduced-motion`; meets contrast in both themes.
-- **NFR-7 · Responsive** — Works at 390 px with no horizontal overflow, matching
-  the standard already met by the guide.
-- **NFR-8 · Visual consistency** — Uses the existing design tokens and
-  components. Story Mode must look like the same product.
-- **NFR-9 · Safety** — Reader code runs in a Web Worker with a hard timeout, as
-  the existing runner does.
+  GitHub Pages. No server, database, or auth.
+- **NFR-2 · Privacy** — No telemetry or analytics. Progress never leaves the
+  browser. The only third-party request is the Pyodide CDN fetch.
+- **NFR-3 · Performance** — Map, unit, and review pages render without loading
+  Pyodide; the runtime loads only when a problem is opened.
+- **NFR-4 · Resilience** — If the CDN is unreachable, units still read and
+  grading explains it is unavailable.
+- **NFR-5 · Progressive enhancement** — The guide renders fully without
+  JavaScript. The course may require it, and must say so rather than render
+  blank.
+- **NFR-6 · Accessibility** — Keyboard operable, visible focus, results
+  announced to assistive technology, honours `prefers-reduced-motion`, contrast
+  met in both themes.
+- **NFR-7 · Responsive** — No horizontal overflow at 390 px.
+- **NFR-8 · Consistency** — Existing design tokens and components only.
+- **NFR-9 · Safety** — Reader code runs in a Web Worker with a hard timeout.
 
-## 8. Constraints and assumptions
+## 8. Constraints
 
-- **C-1** — Hosting is GitHub Pages, "deploy from a branch → root". Build output
-  is committed. No CI build step is available (the session token lacks
-  `workflow` scope), so `npm run build` is run locally before commit.
-- **C-2** — Python only. Pyodide ships CPython; every existing snippet is
-  stdlib-only.
-- **C-3** — Content authoring is Markdown with inline HTML, per the existing
-  pipeline, including the blank-line rule documented in the README.
-- **C-4** — Test code is delivered to the browser and is therefore readable by a
-  determined reader. Accepted: this is a learning tool, not an exam (NG1).
-- **C-5** — First challenge run downloads ≈7 MB of runtime. Mitigated by
-  warming, but unavoidable on first use.
+- **C-1** — GitHub Pages, "deploy from a branch → root"; build output is
+  committed; no CI build (the token lacks `workflow` scope), so `npm run build`
+  runs locally before commit.
+- **C-2** — Python only (Pyodide, stdlib).
+- **C-3** — Markdown with inline HTML, including the blank-line rule in the
+  README.
+- **C-4** — Tests ship to the browser and are readable. Accepted (NG1).
+- **C-5** — First run downloads ≈7 MB of runtime.
+- **C-6** — Content volume is the dominant cost: ~105 problems × (own-words
+  statement + tests + hints + reference solution) plus ~19 approach ladders.
+  This is 3–5× the guide's existing content and is mostly new writing.
 
 ## 9. Success measures
 
-Given NFR-2 forbids telemetry, these are evaluated by hand, not dashboards:
-
-- **S1** — All 14 levels are completable start to finish by someone who has not
-  seen the answers.
-- **S2** — Every challenge's tests pass against its own reference solution and
-  fail against at least one plausible wrong approach — in particular, quadratic
-  solutions must fail the scale tests where the level is about complexity.
-- **S3** — Time from landing to first executed challenge is under 60 seconds on
-  a warm cache.
-- **S4** — The guide's existing reading experience is unchanged: same render,
-  no regressions in the checks already in place.
+- **S1** — A reader who has not seen the answers can complete units 00–02 and
+  correctly solve their transfer problems.
+- **S2** — Every challenge's tests pass its reference solution and fail a
+  plausible wrong approach — in particular, quadratic solutions fail the scale
+  tests wherever the unit is about complexity.
+- **S3** — Every ladder's brute-force rung visibly dies at the stated n in the
+  browser.
+- **S4** — Returned problems actually resurface at the right time across a
+  simulated 7-day clock.
+- **S5** — The guide's existing rendering is unchanged (existing DOM checks).
 
 ## 10. Risks
 
-| Risk | Impact | Mitigation |
-| --- | --- | --- |
-| Fiction undercuts credibility (G3) | Core audience disengages | Keep incidents realistic and short; the cold opens stay in the existing voice; no fantasy elements |
-| §6 is too big as one level | Reader stalls two-thirds through | Sub-challenge tracking and resumability; split as a fallback (OQ-2) |
-| Challenge tests are wrong or brittle | Reader blocked by our bug | S2 required before ship; FR-5 escape hatch; tests accept any correct approach, never a specific implementation |
-| Scope creep into a platform | Never ships | Phase 1 is the campaign shell plus three levels, then reassess |
-| Pyodide payload deters casual readers | Bounce before first run | NFR-3 defers loading; the guide itself never needs it |
+| Risk | Mitigation |
+| --- | --- |
+| Content volume never gets finished (C-6) | Phase 1 ships units 00–02 complete, end to end, before scaling |
+| Copyright exposure from problem text | FR-S2/S3/S4 — own words, link out, own tests |
+| Spine grows into a second LeetCode | Core track is fixed at 00–14; extension is explicitly v2 |
+| Varied problems are varied in name only | Each unit's varied set must include at least one problem from a different domain (a real system, not an array puzzle) |
+| Scheduler feels like a chore | FR-17/18 — never blocks, never guilts |
+| Ladders bloat every problem | Only guided + boss problems get ladders (§4.2) |
 
 ## 11. Open questions
 
-- **OQ-1** — Confirm **FR-5** (manual skip). It softens the gating you chose; it
-  exists to prevent dead-ends. Keep, or enforce strict unlock-by-completion?
-- **OQ-2** — Does §6 stay one `gauntlet` level, or split into 06a–06h if it
-  proves unwieldy?
-- **OQ-3** — Do `briefing` levels (01, 11, 12) need any check at all, or is
-  "continue" enough to mark them done?
-- **OQ-4** — Should the campaign live at `/play` on this site, or eventually as
-  its own deployment?
-- **OQ-5** — How many challenges per `drill` — exactly one, or one required plus
-  optional extras?
+- **OQ-1** — Confirm **FR-5** (manual skip), which softens the gating.
+- **OQ-2** — Do retrieval slots pull automatically from the return set, or are
+  they hand-picked per unit?
+- **OQ-3** — Does the course live at `/learn` alongside the guide, or become the
+  site root with the guide moving to `/reference`?
+- **OQ-4** — Extension units 15–18: committed for v2, or dropped?
+- **OQ-5** — Should ladders be gated (must run brute force before seeing
+  optimal), or freely browsable?
 
 ---
 
-*Next: the technical specification, which implements these requirements.*
+*Next: [the specification](./spec.md).*
