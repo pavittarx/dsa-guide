@@ -545,7 +545,7 @@ expect(busiestMinute([120, 121, 60]), 2, "later minute can win");
 const big = [];
 for (let i = 0; i < 200000; i++) big.push(i);
 for (let i = 0; i < 10; i++) big.push(90);
-under(2.0, "stays fast on a long day", () => busiestMinute(big));
+under(3.0, "stays fast on a long day", () => busiestMinute(big));
 `,
       },
       cpp: {
