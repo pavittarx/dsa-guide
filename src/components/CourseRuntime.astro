@@ -195,7 +195,10 @@
 
   // ---- ladder rungs ------------------------------------------------------
   function wireRung(rung: HTMLElement) {
-    const code = (rung.querySelector('.rung-code') as HTMLElement).textContent || '';
+    // The rung only defines a function; the ladder's shared demo is what
+    // actually exercises it, so every rung is measured on the same workload.
+    const demo = (rung.closest('.ladder') as HTMLElement)?.dataset.ladderDemo || '';
+    const code = ((rung.querySelector('.rung-code') as HTMLElement).textContent || '') + '\n' + demo;
     const out = rung.querySelector('.rung-out') as HTMLElement;
     const status = rung.querySelector('.rung-status') as HTMLElement;
     rung.querySelector('[data-act="run-rung"]')!.addEventListener('click', async () => {

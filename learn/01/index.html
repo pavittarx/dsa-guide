@@ -33,9 +33,20 @@ in <a href="/dsa-guide/#s8">§8</a> — in particular that O(1) is an average, n
 <h2 id="then">Then</h2>
 <p>Four problems below. They look like four different jobs — an index lookup, a
 grouping, a tally, and a walk over a set. They are one skill in four costumes,
-and noticing that is the actual goal of this unit.</p> </article> <section class="ladder"><h3>How you get there</h3><p class="small">
-Each rung runs. Start at the top and watch the cost, rather than taking
-        the last one on faith.
+and noticing that is the actual goal of this unit.</p> </article> <section class="ladder" data-ladder-demo="
+import time
+profiles = [{&#34;id&#34;: i, &#34;name&#34;: &#34;user-%d&#34; % i} for i in range(80_000)]
+ids      = [i for i in range(0, 80_000, 66)]
+
+start = time.perf_counter()
+names = names_for(ids, profiles)
+elapsed = time.perf_counter() - start
+print(f&#34;{len(ids):,} ids resolved against {len(profiles):,} profiles&#34;)
+print(f&#34;first three: {names[:3]}&#34;)
+print(f&#34;took {elapsed:.3f}s&#34;)
+"><h3>How you get there</h3><p class="small">
+Every rung runs on the same workload, so the times are comparable. Start
+        at the top and watch the cost, rather than taking the last one on faith.
 </p><article class="rung"><header class="rung-head"><span class="tag">1 · scan for each id</span><span class="rung-cost">O(len(ids) × len(profiles))</span></header><pre class="rung-code"><code>def names_for(ids, profiles):
     out = []
     for i in ids:
@@ -46,7 +57,7 @@ Each rung runs. Start at the top and watch the cost, rather than taking
     return out
 </code></pre><div class="rung-bar"><button class="runbtn" type="button" data-act="run-rung">
 ▸ Run
-</button><span class="rung-dies">dies at 80,000 profiles × 400 ids → seconds per request</span><span class="rung-status"></span></div><pre class="rung-out" hidden></pre><p class="rung-insight">Every id re-reads the profile list from the top. The list already held the answer the first time through.</p></article><article class="rung"><header class="rung-head"><span class="tag">2 · index once, look up many</span><span class="rung-cost">O(len(profiles) + len(ids)) time, O(len(profiles)) space</span></header><pre class="rung-code"><code>def names_for(ids, profiles):
+</button><span class="rung-dies">dies at 80,000 profiles × 1,200 ids → seconds per request</span><span class="rung-status"></span></div><pre class="rung-out" hidden></pre><p class="rung-insight">Every id re-reads the profile list from the top. The list already held the answer the first time through.</p></article><article class="rung"><header class="rung-head"><span class="tag">2 · index once, look up many</span><span class="rung-cost">O(len(profiles) + len(ids)) time, O(len(profiles)) space</span></header><pre class="rung-code"><code>def names_for(ids, profiles):
     by_id = {p[&quot;id&quot;]: p[&quot;name&quot;] for p in profiles}
     return [by_id[i] for i in ids]
 </code></pre><div class="rung-bar"><button class="runbtn" type="button" data-act="run-rung">
@@ -123,4 +134,4 @@ From earlier units. These do not gate this unit — they are here because
     return None
 </code></pre> </details> <script type="application/json" class="problem-data">{"tests":"\nexpect(first_unique([\"a\", \"b\", \"a\"]), \"b\", \"b is unique\")\nexpect(first_unique([\"a\", \"a\"]), None, \"everything repeats\")\nexpect(first_unique([]), None, \"empty log\")\nexpect(first_unique([\"x\"]), \"x\", \"single entry\")\nexpect(first_unique([\"a\", \"b\", \"b\", \"a\", \"c\"]), \"c\", \"unique appears last\")\n\nbig = [\"id-%d\" % (i % 3_000) for i in range(6_000)] + [\"only-me\"]\nunder(0.5, \"stays fast on a long log\", lambda: first_unique(big))\n","hints":["You cannot know an id is unique until you have seen the whole log.","That suggests two passes: one to learn, one to answer.","Order matters for the answer, so the second pass walks the original list, not the tally."],"entry":"first_unique"}</script> </section>  <section class="inv-panel"> <h2 class="slot-head">Added to your inventory</h2> <div class="card"> <span class="tag">remember</span> <p><strong>Hash map / set</strong> — O(1) average insert and lookup</p> <p class="small">Answer &quot;have I seen this?&quot;, &quot;how many of each?&quot;, and &quot;where is it?&quot; without re-scanning. Solves more real problems than everything else here combined.</p> </div><div class="card"> <span class="tag">remember</span> <p><strong>Counting &amp; grouping</strong> — O(n) to build</p> <p class="small">Tally occurrences or bucket items by a computed key. Turns &quot;are these anagrams&quot;, &quot;most common error&quot;, and &quot;group by shape&quot; into two lines.</p> </div> <p class="small"><a href="/dsa-guide/inventory">See the whole inventory →</a></p> </section> <div id="unit-complete" hidden class="card win"> <span class="tag">unit complete</span> <p>Everything required here passes. The next unit is unlocked.</p> <p><a class="runbtn primary" href="/dsa-guide/learn">Back to the map</a></p> </div> </div> </div> <p id="storage-notice" hidden class="small">
 This browser won't let the page save progress, so it will be lost when you leave.
-</p> <script type="module" src="/dsa-guide/_astro/CourseRuntime.astro_astro_type_script_index_0_lang.CYbG6eDT.js"></script>  </div> <script type="module" src="/dsa-guide/_astro/CodeRunner.astro_astro_type_script_index_0_lang.BdjFWucU.js"></script> </body></html>
+</p> <script type="module" src="/dsa-guide/_astro/CourseRuntime.astro_astro_type_script_index_0_lang.56apVkNv.js"></script>  </div> <script type="module" src="/dsa-guide/_astro/CodeRunner.astro_astro_type_script_index_0_lang.BdjFWucU.js"></script> </body></html>

@@ -33,7 +33,7 @@ export const problems: Problem[] = [
         code:
           'def names_for(ids, profiles):\n    out = []\n    for i in ids:\n        for p in profiles:\n            if p["id"] == i:\n                out.append(p["name"])\n                break\n    return out\n',
         complexity: 'O(len(ids) × len(profiles))',
-        diesAt: '80,000 profiles × 400 ids → seconds per request',
+        diesAt: '80,000 profiles × 1,200 ids → seconds per request',
         insight:
           'Every id re-reads the profile list from the top. The list already held the answer the first time through.',
       },
@@ -48,6 +48,18 @@ export const problems: Problem[] = [
     ],
     wrongApproach:
       'def names_for(ids, profiles):\n    out = []\n    for i in ids:\n        for p in profiles:\n            if p["id"] == i:\n                out.append(p["name"])\n                break\n    return out\n',
+    ladderDemo: `
+import time
+profiles = [{"id": i, "name": "user-%d" % i} for i in range(80_000)]
+ids      = [i for i in range(0, 80_000, 66)]
+
+start = time.perf_counter()
+names = names_for(ids, profiles)
+elapsed = time.perf_counter() - start
+print(f"{len(ids):,} ids resolved against {len(profiles):,} profiles")
+print(f"first three: {names[:3]}")
+print(f"took {elapsed:.3f}s")
+`,
     tests: `
 P = [{"id": 1, "name": "ada"}, {"id": 2, "name": "grace"}, {"id": 3, "name": "alan"}]
 expect(names_for([2, 1], P), ["grace", "ada"], "order follows the ids")

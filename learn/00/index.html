@@ -37,14 +37,24 @@ you something to reach for when a pattern name will not come.</p>
 <h2 id="read">Read</h2>
 <p>The reference guide covers the scale table in
 <a href="/dsa-guide/#s3">§3 — Cost intuition</a>. Skim it, then come back — the code below
-is where it sticks.</p> </article> <section class="ladder"><h3>How you get there</h3><p class="small">
-Each rung runs. Start at the top and watch the cost, rather than taking
-        the last one on faith.
+is where it sticks.</p> </article> <section class="ladder" data-ladder-demo="
+import time
+enabled = [&#34;flag-%d&#34; % i for i in range(120_000)]
+needed  = [&#34;flag-%d&#34; % i for i in range(0, 120_000, 20)]
+
+start = time.perf_counter()
+result = has_all(needed, enabled)
+elapsed = time.perf_counter() - start
+print(f&#34;{len(needed):,} flags checked against {len(enabled):,} enabled -> {result}&#34;)
+print(f&#34;took {elapsed:.3f}s&#34;)
+"><h3>How you get there</h3><p class="small">
+Every rung runs on the same workload, so the times are comparable. Start
+        at the top and watch the cost, rather than taking the last one on faith.
 </p><article class="rung"><header class="rung-head"><span class="tag">1 · the obvious one-liner</span><span class="rung-cost">O(len(needed) × len(enabled))</span></header><pre class="rung-code"><code>def has_all(needed, enabled):
     return all(flag in enabled for flag in needed)
 </code></pre><div class="rung-bar"><button class="runbtn" type="button" data-act="run-rung">
 ▸ Run
-</button><span class="rung-dies">dies at 120,000 flags × 600 lookups → seconds, not milliseconds</span><span class="rung-status"></span></div><pre class="rung-out" hidden></pre><p class="rung-insight">`in` on a list is a linear scan. Nothing in this code looks like a nested loop, but there is one hiding inside the `in`.</p></article><article class="rung"><header class="rung-head"><span class="tag">2 · remember what is enabled</span><span class="rung-cost">O(len(enabled) + len(needed)) time, O(len(enabled)) space</span></header><pre class="rung-code"><code>def has_all(needed, enabled):
+</button><span class="rung-dies">dies at 120,000 flags × 6,000 lookups → ~10s, not milliseconds</span><span class="rung-status"></span></div><pre class="rung-out" hidden></pre><p class="rung-insight">`in` on a list is a linear scan. Nothing in this code looks like a nested loop, but there is one hiding inside the `in`.</p></article><article class="rung"><header class="rung-head"><span class="tag">2 · remember what is enabled</span><span class="rung-cost">O(len(enabled) + len(needed)) time, O(len(enabled)) space</span></header><pre class="rung-code"><code>def has_all(needed, enabled):
     on = set(enabled)
     return all(flag in on for flag in needed)
 </code></pre><div class="rung-bar"><button class="runbtn" type="button" data-act="run-rung">
@@ -77,4 +87,4 @@ Each rung runs. Start at the top and watch the cost, rather than taking
     return min(m for m, c in counts.items() if c == best)
 </code></pre> </details> <script type="application/json" class="problem-data">{"tests":"\nexpect(busiest_minute([0, 1, 2, 61]), 0, \"minute 0 has three\")\nexpect(busiest_minute([61, 62, 0]), 1, \"minute 1 has two\")\nexpect(busiest_minute([]), None, \"no events\")\nexpect(busiest_minute([0, 60]), 0, \"tie picks the earliest\")\nexpect(busiest_minute([120, 121, 60]), 2, \"later minute can win\")\n\n# Correctness catches the wrong approach here, so this is only a guard\n# against something absurdly slow — hence the generous limit.\nbig = [i for i in range(200_000)] + [90] * 10\nunder(5.0, \"stays fast on a long day\", lambda: busiest_minute(big))\n","hints":["Every timestamp belongs to exactly one bucket. What is the bucket key?","Tally per bucket in one pass, then pick the winner from the tally.","For the tie rule, take the smallest key among those holding the maximum count."],"entry":"busiest_minute"}</script> </section>  <section class="inv-panel"> <h2 class="slot-head">Added to your inventory</h2> <div class="card"> <span class="tag">remember</span> <p><strong>Hash map / set</strong> — O(1) average insert and lookup</p> <p class="small">Answer &quot;have I seen this?&quot;, &quot;how many of each?&quot;, and &quot;where is it?&quot; without re-scanning. Solves more real problems than everything else here combined.</p> </div><div class="card"> <span class="tag">remember</span> <p><strong>Counting &amp; grouping</strong> — O(n) to build</p> <p class="small">Tally occurrences or bucket items by a computed key. Turns &quot;are these anagrams&quot;, &quot;most common error&quot;, and &quot;group by shape&quot; into two lines.</p> </div> <p class="small"><a href="/dsa-guide/inventory">See the whole inventory →</a></p> </section> <div id="unit-complete" hidden class="card win"> <span class="tag">unit complete</span> <p>Everything required here passes. The next unit is unlocked.</p> <p><a class="runbtn primary" href="/dsa-guide/learn">Back to the map</a></p> </div> </div> </div> <p id="storage-notice" hidden class="small">
 This browser won't let the page save progress, so it will be lost when you leave.
-</p> <script type="module" src="/dsa-guide/_astro/CourseRuntime.astro_astro_type_script_index_0_lang.CYbG6eDT.js"></script>  </div> <script type="module" src="/dsa-guide/_astro/CodeRunner.astro_astro_type_script_index_0_lang.BdjFWucU.js"></script> </body></html>
+</p> <script type="module" src="/dsa-guide/_astro/CourseRuntime.astro_astro_type_script_index_0_lang.56apVkNv.js"></script>  </div> <script type="module" src="/dsa-guide/_astro/CodeRunner.astro_astro_type_script_index_0_lang.BdjFWucU.js"></script> </body></html>

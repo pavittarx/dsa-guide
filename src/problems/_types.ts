@@ -39,6 +39,12 @@ export interface Problem {
   skills: string[];
   /** Present only on guided + boss problems. */
   ladder?: Rung[];
+  /**
+   * Appended to every rung when it runs, so each approach is exercised on the
+   * SAME workload and the timings are actually comparable. Without this a rung
+   * only defines a function and reports nothing.
+   */
+  ladderDemo?: string;
   /** A plausible wrong approach, asserted to FAIL the tests by `npm run verify`. */
   wrongApproach?: string;
 }

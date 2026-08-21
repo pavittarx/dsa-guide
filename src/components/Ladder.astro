@@ -12,11 +12,11 @@ const rungs = p.ladder ?? [];
 
 {
   rungs.length > 0 && (
-    <section class="ladder">
+    <section class="ladder" data-ladder-demo={p.ladderDemo ?? ''}>
       <h3>How you get there</h3>
       <p class="small">
-        Each rung runs. Start at the top and watch the cost, rather than taking
-        the last one on faith.
+        Every rung runs on the same workload, so the times are comparable. Start
+        at the top and watch the cost, rather than taking the last one on faith.
       </p>
 
       {rungs.map((r, i) => (

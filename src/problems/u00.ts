@@ -30,7 +30,7 @@ export const problems: Problem[] = [
         label: 'the obvious one-liner',
         code: 'def has_all(needed, enabled):\n    return all(flag in enabled for flag in needed)\n',
         complexity: 'O(len(needed) × len(enabled))',
-        diesAt: '120,000 flags × 600 lookups → seconds, not milliseconds',
+        diesAt: '120,000 flags × 6,000 lookups → ~10s, not milliseconds',
         insight:
           '`in` on a list is a linear scan. Nothing in this code looks like a nested loop, but there is one hiding inside the `in`.',
       },
@@ -43,6 +43,17 @@ export const problems: Problem[] = [
       },
     ],
     wrongApproach: 'def has_all(needed, enabled):\n    return all(flag in enabled for flag in needed)\n',
+    ladderDemo: `
+import time
+enabled = ["flag-%d" % i for i in range(120_000)]
+needed  = ["flag-%d" % i for i in range(0, 120_000, 20)]
+
+start = time.perf_counter()
+result = has_all(needed, enabled)
+elapsed = time.perf_counter() - start
+print(f"{len(needed):,} flags checked against {len(enabled):,} enabled -> {result}")
+print(f"took {elapsed:.3f}s")
+`,
     tests: `
 expect(has_all(["a"], ["a", "b"]), True, "flag is enabled")
 expect(has_all(["z"], ["a", "b"]), False, "flag is missing")
