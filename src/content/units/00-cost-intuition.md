@@ -61,6 +61,18 @@ you something to reach for when a pattern name will not come.
 
 This unit is about the first one, and about the judgement of when not to bother.
 
+## A note on the code
+
+Solutions here are written **the long way on purpose**: explicit loops, one
+step per line, and names that say what the thing is. Python can express most of
+this in a single line, and those lines are lovely once you already know what
+they do — but they hide the machine, and the machine is what you are here to
+learn.
+
+So every approach ladder ends with a **"the short way"** rung showing the
+idiomatic version, with a note on how to read it. Learn the mechanism first,
+then collect the shorthand. Never the other way round.
+
 ## Read
 
 The reference guide covers the scale table in

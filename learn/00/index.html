@@ -34,57 +34,132 @@ you something to reach for when a pattern name will not come.</p>
   <p><strong>Arrange to touch each element a bounded number of times.</strong> Symptom: nested loops where the inner one never needs to go backwards.</p>
 </div>
 <p>This unit is about the first one, and about the judgement of when not to bother.</p>
+<h2 id="a-note-on-the-code">A note on the code</h2>
+<p>Solutions here are written <strong>the long way on purpose</strong>: explicit loops, one
+step per line, and names that say what the thing is. Python can express most of
+this in a single line, and those lines are lovely once you already know what
+they do — but they hide the machine, and the machine is what you are here to
+learn.</p>
+<p>So every approach ladder ends with a <strong>"the short way"</strong> rung showing the
+idiomatic version, with a note on how to read it. Learn the mechanism first,
+then collect the shorthand. Never the other way round.</p>
 <h2 id="read">Read</h2>
 <p>The reference guide covers the scale table in
 <a href="/dsa-guide/#s3">§3 — Cost intuition</a>. Skim it, then come back — the code below
 is where it sticks.</p> </article> <section class="ladder" data-ladder-demo="
 import time
-enabled = [&#34;flag-%d&#34; % i for i in range(120_000)]
-needed  = [&#34;flag-%d&#34; % i for i in range(0, 120_000, 20)]
+
+# Setup: a big list of enabled flags, and a page asking for many of them.
+enabled = []
+for i in range(120_000):
+    enabled.append(&#34;flag-%d&#34; % i)
+
+needed = []
+for i in range(0, 120_000, 20):
+    needed.append(&#34;flag-%d&#34; % i)
 
 start = time.perf_counter()
 result = has_all(needed, enabled)
 elapsed = time.perf_counter() - start
-print(f&#34;{len(needed):,} flags checked against {len(enabled):,} enabled -> {result}&#34;)
-print(f&#34;took {elapsed:.3f}s&#34;)
+
+print(&#34;checked&#34;, len(needed), &#34;flags against&#34;, len(enabled), &#34;enabled ->&#34;, result)
+print(&#34;took %.3fs&#34; % elapsed)
 "><h3>How you get there</h3><p class="small">
 Every rung runs on the same workload, so the times are comparable. Start
         at the top and watch the cost, rather than taking the last one on faith.
-</p><article class="rung"><header class="rung-head"><span class="tag">1 · the obvious one-liner</span><span class="rung-cost">O(len(needed) × len(enabled))</span></header><pre class="rung-code"><code>def has_all(needed, enabled):
+</p><article class="rung"><header class="rung-head"><span class="tag">1 · the innocent one-liner</span><span class="rung-cost">O(len(needed) × len(enabled))</span></header><pre class="rung-code"><code>def has_all(needed, enabled):
     return all(flag in enabled for flag in needed)
 </code></pre><div class="rung-bar"><button class="runbtn" type="button" data-act="run-rung">
 ▸ Run
-</button><span class="rung-dies">dies at 120,000 flags × 6,000 lookups → ~10s, not milliseconds</span><span class="rung-status"></span></div><pre class="rung-out" hidden></pre><p class="rung-insight">`in` on a list is a linear scan. Nothing in this code looks like a nested loop, but there is one hiding inside the `in`.</p></article><article class="rung"><header class="rung-head"><span class="tag">2 · remember what is enabled</span><span class="rung-cost">O(len(enabled) + len(needed)) time, O(len(enabled)) space</span></header><pre class="rung-code"><code>def has_all(needed, enabled):
+</button><span class="rung-dies">dies at 120,000 flags × 6,000 lookups → ~10s, not milliseconds</span><span class="rung-status"></span></div><pre class="rung-out" hidden></pre><p class="rung-insight">There is no nested loop anywhere in this line — and yet there is one. It is hiding inside the word `in`.</p></article><article class="rung"><header class="rung-head"><span class="tag">2 · the same thing, spelled out</span><span class="rung-cost">O(len(needed) × len(enabled)) — identical to the one-liner</span></header><pre class="rung-code"><code>def has_all(needed, enabled):
+    for flag in needed:
+        found = False
+        for candidate in enabled:      # &lt;- this is what &quot;in&quot; was doing
+            if candidate == flag:
+                found = True
+                break
+        if not found:
+            return False
+    return True
+</code></pre><div class="rung-bar"><button class="runbtn" type="button" data-act="run-rung">
+▸ Run
+</button><span class="rung-status"></span></div><pre class="rung-out" hidden></pre><p class="rung-insight">Same work, nothing hidden — the nested loop is now on the screen where you can see it, and the problem is obvious: the inner loop restarts from the top every single time. If this rung times a little slower than the one above, that is expected: `in` does the scanning down in C, while this does it in Python. Same shape, slightly heavier steps.</p></article><article class="rung"><header class="rung-head"><span class="tag">3 · remember what is enabled</span><span class="rung-cost">O(len(enabled) + len(needed)) time, O(len(enabled)) space</span></header><pre class="rung-code"><code>def has_all(needed, enabled):
+    on = set()
+    for flag in enabled:
+        on.add(flag)
+
+    for flag in needed:
+        if flag not in on:
+            return False
+    return True
+</code></pre><div class="rung-bar"><button class="runbtn" type="button" data-act="run-rung">
+▸ Run
+</button><span class="rung-status"></span></div><pre class="rung-out" hidden></pre><p class="rung-insight">Two loops one after the other instead of one inside the other. That is the whole fix. You spent memory on the set and bought back all that scanning.</p></article><article class="rung"><header class="rung-head"><span class="tag">4 · the short way (same thing)</span><span class="rung-cost">O(len(enabled) + len(needed)) — identical to the rung above</span></header><pre class="rung-code"><code>def has_all(needed, enabled):
     on = set(enabled)
     return all(flag in on for flag in needed)
 </code></pre><div class="rung-bar"><button class="runbtn" type="button" data-act="run-rung">
 ▸ Run
-</button><span class="rung-status"></span></div><pre class="rung-out" hidden></pre><p class="rung-insight">One pass builds a set; every later membership question is answered in constant time. You bought time with memory.</p></article></section> <h2 class="slot-head">Guided</h2> <section class="problem" data-problem-id="u00-flag-check" data-required="true" data-slot="ladder" id="p-u00-flag-check"> <header class="problem-head"> <span class="tag">guided</span> <h3>The access check that got slow</h3> </header> <div class="problem-statement"> <p>A request handler checks whether every feature flag a page needs is enabled for the user. `enabled` is the list of flag names turned on for that user; `needed` is what the page asks for. Return `True` when every needed flag is enabled.</p><p>It shipped fine. Then the flag list grew, and this handler started showing up at the top of the latency graph.</p> </div>  <textarea class="problem-editor" spellcheck="false" aria-label="Solution for The access check that got slow">def has_all(needed, enabled):
+</button><span class="rung-status"></span></div><pre class="rung-out" hidden></pre><p class="rung-insight">Once you can see the two loops in your head, this is the version you would write at work. Read it as: &quot;make a set, then check every flag against it.&quot; Same machine, fewer keystrokes.</p></article></section> <h2 class="slot-head">Guided</h2> <section class="problem" data-problem-id="u00-flag-check" data-required="true" data-slot="ladder" id="p-u00-flag-check"> <header class="problem-head"> <span class="tag">guided</span> <h3>The access check that got slow</h3> </header> <div class="problem-statement"> <p>A request handler checks whether every feature flag a page needs is enabled for the user. `enabled` is the list of flag names turned on for that user; `needed` is what the page asks for. Return `True` when every needed flag is enabled.</p><p>It shipped fine. Then the flag list grew, and this handler started showing up at the top of the latency graph.</p> </div>  <textarea class="problem-editor" spellcheck="false" aria-label="Solution for The access check that got slow">def has_all(needed, enabled):
+    # needed:  list of flag names this page requires
     # enabled: list of flag names turned on for this user
     ...
 </textarea> <div class="problem-bar"> <button class="runbtn primary" type="button" data-act="submit">▸ Submit</button> <button class="runbtn" type="button" data-act="run">Run</button> <button class="runbtn" type="button" data-act="hint">Hint</button> <button class="runbtn" type="button" data-act="reset">Reset</button> <button class="runbtn danger" type="button" data-act="stop" hidden>■ Stop</button> <span class="problem-status"></span> </div> <div class="problem-hints" hidden></div> <ol class="problem-results" hidden></ol> <pre class="problem-out" tabindex="0" hidden></pre> <details class="problem-solution" hidden> <summary>Reference solution</summary> <pre><code>def has_all(needed, enabled):
-    on = set(enabled)
-    return all(flag in on for flag in needed)
-</code></pre> </details> <script type="application/json" class="problem-data">{"tests":"\nexpect(has_all([\"a\"], [\"a\", \"b\"]), True, \"flag is enabled\")\nexpect(has_all([\"z\"], [\"a\", \"b\"]), False, \"flag is missing\")\nexpect(has_all([], [\"a\"]), True, \"asking for nothing is satisfied\")\nexpect(has_all([\"a\", \"a\"], [\"a\"]), True, \"repeated request\")\nexpect(has_all([\"a\", \"z\"], [\"a\", \"b\"]), False, \"one of two missing\")\n\nbig = [\"flag-%d\" % i for i in range(120_000)]\nask = [\"flag-%d\" % i for i in range(0, 120_000, 20)]\nunder(1.5, \"stays fast on a large flag list\", lambda: has_all(ask, big))\n","hints":["What is the cost of `x in some_list`? It is not O(1).","The check re-walks `enabled` from the start for every flag in `needed`.","Pay once to build something with O(1) membership, then ask it many times."],"entry":"has_all"}</script> </section>  <h2 class="slot-head">Varied practice</h2> <p class="small">Different jobs on the surface. The same move underneath.</p> <section class="problem" data-problem-id="u00-first-repeat" data-required="true" data-slot="varied" id="p-u00-first-repeat"> <header class="problem-head"> <span class="tag">varied practice</span> <h3>The delivery that arrived twice</h3> </header> <div class="problem-statement"> <p>A queue consumer receives message ids and must stop the first time it sees one it has already handled. Return the first id that appears for a second time, or `None` if every id is unique.</p> </div>  <textarea class="problem-editor" spellcheck="false" aria-label="Solution for The delivery that arrived twice">def first_repeat(ids):
+    # Step 1: pay once to put every enabled flag in a set.
+    # Looking something up in a set does not scan it.
+    on = set()
+    for flag in enabled:
+        on.add(flag)
+
+    # Step 2: check each needed flag against that set.
+    for flag in needed:
+        if flag not in on:
+            return False
+
+    return True
+</code></pre> </details> <script type="application/json" class="problem-data">{"tests":"\nexpect(has_all([\"a\"], [\"a\", \"b\"]), True, \"flag is enabled\")\nexpect(has_all([\"z\"], [\"a\", \"b\"]), False, \"flag is missing\")\nexpect(has_all([], [\"a\"]), True, \"asking for nothing is satisfied\")\nexpect(has_all([\"a\", \"a\"], [\"a\"]), True, \"repeated request\")\nexpect(has_all([\"a\", \"z\"], [\"a\", \"b\"]), False, \"one of two missing\")\n\nbig = [\"flag-%d\" % i for i in range(120_000)]\nask = [\"flag-%d\" % i for i in range(0, 120_000, 20)]\nunder(2.5, \"stays fast on a large flag list\", lambda: has_all(ask, big))\n","hints":["What does `x in some_list` actually do? Python walks the list from the start until it finds x.","That means the check re-walks `enabled` from the beginning for every flag in `needed`.","Pay once to build something that can answer \"is this in there?\" without walking. A set does that."],"entry":"has_all"}</script> </section>  <h2 class="slot-head">Varied practice</h2> <p class="small">Different jobs on the surface. The same move underneath.</p> <section class="problem" data-problem-id="u00-first-repeat" data-required="true" data-slot="varied" id="p-u00-first-repeat"> <header class="problem-head"> <span class="tag">varied practice</span> <h3>The delivery that arrived twice</h3> </header> <div class="problem-statement"> <p>A queue consumer receives message ids and must stop the first time it sees one it has already handled. Return the first id that appears for a second time, or `None` if every id is unique.</p> </div>  <textarea class="problem-editor" spellcheck="false" aria-label="Solution for The delivery that arrived twice">def first_repeat(ids):
+    # ids: message ids, in the order they arrived
     ...
 </textarea> <div class="problem-bar"> <button class="runbtn primary" type="button" data-act="submit">▸ Submit</button> <button class="runbtn" type="button" data-act="run">Run</button> <button class="runbtn" type="button" data-act="hint">Hint</button> <button class="runbtn" type="button" data-act="reset">Reset</button> <button class="runbtn danger" type="button" data-act="stop" hidden>■ Stop</button> <span class="problem-status"></span> </div> <div class="problem-hints" hidden></div> <ol class="problem-results" hidden></ol> <pre class="problem-out" tabindex="0" hidden></pre> <details class="problem-solution" hidden> <summary>Reference solution</summary> <pre><code>def first_repeat(ids):
+    # Keep a record of everything handled so far.
     seen = set()
-    for i in ids:
-        if i in seen:
-            return i
-        seen.add(i)
-    return None
-</code></pre> </details> <script type="application/json" class="problem-data">{"tests":"\nexpect(first_repeat([1, 2, 3, 2, 1]), 2, \"first repeat is 2\")\nexpect(first_repeat([1, 2, 3]), None, \"all unique\")\nexpect(first_repeat([]), None, \"empty\")\nexpect(first_repeat([\"a\", \"b\", \"a\"]), \"a\", \"works on strings\")\nexpect(first_repeat([5, 5]), 5, \"immediate repeat\")\n\nbig = list(range(150_000)) + [7]\nunder(2.0, \"stays fast on a long stream\", lambda: first_repeat(big))\n","hints":["You only need to answer one question per element: \"have I seen this before?\"","A set answers that in constant time, and you can build it as you go."],"entry":"first_repeat"}</script> </section>   <h2 class="slot-head">Transfer</h2> <p class="small">No pattern is named. Choosing it is the skill.</p> <section class="problem" data-problem-id="u00-busiest-minute" data-required="true" data-slot="transfer" id="p-u00-busiest-minute"> <header class="problem-head"> <span class="tag">transfer — pattern not named</span> <h3>Which minute hurt?</h3> </header> <div class="problem-statement"> <p>You have a list of event timestamps in seconds. Return the minute that contains the most events — a minute being `timestamp // 60`. If several tie, return the earliest.</p><p>No pattern is named for this one. Work out what the problem is really asking before you write anything.</p> </div>  <textarea class="problem-editor" spellcheck="false" aria-label="Solution for Which minute hurt?">def busiest_minute(timestamps):
+
+    for message_id in ids:
+        if message_id in seen:
+            return message_id      # handled this one already
+        seen.add(message_id)
+
+    return None                    # every id was unique
+</code></pre> </details> <script type="application/json" class="problem-data">{"tests":"\nexpect(first_repeat([1, 2, 3, 2, 1]), 2, \"first repeat is 2\")\nexpect(first_repeat([1, 2, 3]), None, \"all unique\")\nexpect(first_repeat([]), None, \"empty\")\nexpect(first_repeat([\"a\", \"b\", \"a\"]), \"a\", \"works on strings\")\nexpect(first_repeat([5, 5]), 5, \"immediate repeat\")\n\nbig = list(range(150_000)) + [7]\nunder(2.0, \"stays fast on a long stream\", lambda: first_repeat(big))\n","hints":["For each message you only ever ask one question: \"have I already handled this?\"","A set answers that without scanning, and you can add to it as you go.","Check before you add — otherwise every message finds itself."],"entry":"first_repeat"}</script> </section>   <h2 class="slot-head">Transfer</h2> <p class="small">No pattern is named. Choosing it is the skill.</p> <section class="problem" data-problem-id="u00-busiest-minute" data-required="true" data-slot="transfer" id="p-u00-busiest-minute"> <header class="problem-head"> <span class="tag">transfer — pattern not named</span> <h3>Which minute hurt?</h3> </header> <div class="problem-statement"> <p>You have a list of event timestamps in seconds. Return the minute that contains the most events — a minute being `timestamp // 60`. If several tie, return the earliest.</p><p>No pattern is named for this one. Work out what the problem is really asking before you write anything.</p> </div>  <textarea class="problem-editor" spellcheck="false" aria-label="Solution for Which minute hurt?">def busiest_minute(timestamps):
+    # timestamps: event times, in seconds
     ...
 </textarea> <div class="problem-bar"> <button class="runbtn primary" type="button" data-act="submit">▸ Submit</button> <button class="runbtn" type="button" data-act="run">Run</button> <button class="runbtn" type="button" data-act="hint">Hint</button> <button class="runbtn" type="button" data-act="reset">Reset</button> <button class="runbtn danger" type="button" data-act="stop" hidden>■ Stop</button> <span class="problem-status"></span> </div> <div class="problem-hints" hidden></div> <ol class="problem-results" hidden></ol> <pre class="problem-out" tabindex="0" hidden></pre> <details class="problem-solution" hidden> <summary>Reference solution</summary> <pre><code>def busiest_minute(timestamps):
-    if not timestamps:
+    if len(timestamps) == 0:
         return None
+
+    # Step 1: count how many events landed in each minute.
     counts = {}
-    for t in timestamps:
-        m = t // 60
-        counts[m] = counts.get(m, 0) + 1
-    best = max(counts.values())
-    return min(m for m, c in counts.items() if c == best)
-</code></pre> </details> <script type="application/json" class="problem-data">{"tests":"\nexpect(busiest_minute([0, 1, 2, 61]), 0, \"minute 0 has three\")\nexpect(busiest_minute([61, 62, 0]), 1, \"minute 1 has two\")\nexpect(busiest_minute([]), None, \"no events\")\nexpect(busiest_minute([0, 60]), 0, \"tie picks the earliest\")\nexpect(busiest_minute([120, 121, 60]), 2, \"later minute can win\")\n\n# Correctness catches the wrong approach here, so this is only a guard\n# against something absurdly slow — hence the generous limit.\nbig = [i for i in range(200_000)] + [90] * 10\nunder(5.0, \"stays fast on a long day\", lambda: busiest_minute(big))\n","hints":["Every timestamp belongs to exactly one bucket. What is the bucket key?","Tally per bucket in one pass, then pick the winner from the tally.","For the tie rule, take the smallest key among those holding the maximum count."],"entry":"busiest_minute"}</script> </section>  <section class="inv-panel"> <h2 class="slot-head">Added to your inventory</h2> <div class="card"> <span class="tag">remember</span> <p><strong>Hash map / set</strong> — O(1) average insert and lookup</p> <p class="small">Answer &quot;have I seen this?&quot;, &quot;how many of each?&quot;, and &quot;where is it?&quot; without re-scanning. Solves more real problems than everything else here combined.</p> </div><div class="card"> <span class="tag">remember</span> <p><strong>Counting &amp; grouping</strong> — O(n) to build</p> <p class="small">Tally occurrences or bucket items by a computed key. Turns &quot;are these anagrams&quot;, &quot;most common error&quot;, and &quot;group by shape&quot; into two lines.</p> </div> <p class="small"><a href="/dsa-guide/inventory">See the whole inventory →</a></p> </section> <div id="unit-complete" hidden class="card win"> <span class="tag">unit complete</span> <p>Everything required here passes. The next unit is unlocked.</p> <p><a class="runbtn primary" href="/dsa-guide/learn">Back to the map</a></p> </div> </div> </div> <p id="storage-notice" hidden class="small">
+    for seconds in timestamps:
+        minute = seconds // 60
+        if minute in counts:
+            counts[minute] = counts[minute] + 1
+        else:
+            counts[minute] = 1
+
+    # Step 2: find the busiest. On a tie, keep the earlier minute.
+    best_minute = None
+    best_count = 0
+    for minute in counts:
+        count = counts[minute]
+        if best_minute is None:
+            best_minute = minute
+            best_count = count
+        elif count &gt; best_count:
+            best_minute = minute
+            best_count = count
+        elif count == best_count and minute &lt; best_minute:
+            best_minute = minute
+
+    return best_minute
+</code></pre> </details> <script type="application/json" class="problem-data">{"tests":"\nexpect(busiest_minute([0, 1, 2, 61]), 0, \"minute 0 has three\")\nexpect(busiest_minute([61, 62, 0]), 1, \"minute 1 has two\")\nexpect(busiest_minute([]), None, \"no events\")\nexpect(busiest_minute([0, 60]), 0, \"tie picks the earliest\")\nexpect(busiest_minute([120, 121, 60]), 2, \"later minute can win\")\n\n# Correctness catches the wrong approach here, so this is only a guard\n# against something absurdly slow — hence the generous limit.\nbig = [i for i in range(200_000)] + [90] * 10\nunder(5.0, \"stays fast on a long day\", lambda: busiest_minute(big))\n","hints":["Every timestamp belongs to exactly one minute. What turns a timestamp into its minute?","Count per minute in one pass, then pick the winner from the counts in a second pass.","For the tie rule, only replace the current best when the count is higher, or the count is equal and the minute is earlier."],"entry":"busiest_minute"}</script> </section>  <section class="inv-panel"> <h2 class="slot-head">Added to your inventory</h2> <div class="card"> <span class="tag">remember</span> <p><strong>Hash map / set</strong> — O(1) average insert and lookup</p> <p class="small">Answer &quot;have I seen this?&quot;, &quot;how many of each?&quot;, and &quot;where is it?&quot; without re-scanning. Solves more real problems than everything else here combined.</p> </div><div class="card"> <span class="tag">remember</span> <p><strong>Counting &amp; grouping</strong> — O(n) to build</p> <p class="small">Tally occurrences or bucket items by a computed key. Turns &quot;are these anagrams&quot;, &quot;most common error&quot;, and &quot;group by shape&quot; into two lines.</p> </div> <p class="small"><a href="/dsa-guide/inventory">See the whole inventory →</a></p> </section> <div id="unit-complete" hidden class="card win"> <span class="tag">unit complete</span> <p>Everything required here passes. The next unit is unlocked.</p> <p><a class="runbtn primary" href="/dsa-guide/learn">Back to the map</a></p> </div> </div> </div> <p id="storage-notice" hidden class="small">
 This browser won't let the page save progress, so it will be lost when you leave.
 </p> <script type="module" src="/dsa-guide/_astro/CourseRuntime.astro_astro_type_script_index_0_lang.56apVkNv.js"></script>  </div> <script type="module" src="/dsa-guide/_astro/CodeRunner.astro_astro_type_script_index_0_lang.BdjFWucU.js"></script> </body></html>

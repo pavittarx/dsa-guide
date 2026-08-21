@@ -1,6 +1,12 @@
 /*
  * Unit 00 — Cost intuition.
  *
+ * House style for every reference solution: written the long way on purpose.
+ * Explicit loops over comprehensions, one operation per line, and names that
+ * say what the thing is. The clever one-liner is taught too — but as the last
+ * rung of a ladder, after the mechanism is visible, never as the first thing
+ * a reader meets.
+ *
  * Problems are ours. Where a canonical exercise is the clearest vehicle for a
  * skill we write our own statement and recast it into the course's production
  * framing; `source` links out for the original (requirements FR-S1..FR-S4).
@@ -16,43 +22,102 @@ export const problems: Problem[] = [
       'A request handler checks whether every feature flag a page needs is enabled for the user. `enabled` is the list of flag names turned on for that user; `needed` is what the page asks for. Return `True` when every needed flag is enabled.\n\nIt shipped fine. Then the flag list grew, and this handler started showing up at the top of the latency graph.',
     origin: 'original',
     entry: 'has_all',
-    starter: 'def has_all(needed, enabled):\n    # enabled: list of flag names turned on for this user\n    ...\n',
-    solution:
-      'def has_all(needed, enabled):\n    on = set(enabled)\n    return all(flag in on for flag in needed)\n',
+    starter:
+      'def has_all(needed, enabled):\n    # needed:  list of flag names this page requires\n    # enabled: list of flag names turned on for this user\n    ...\n',
+    solution: `def has_all(needed, enabled):
+    # Step 1: pay once to put every enabled flag in a set.
+    # Looking something up in a set does not scan it.
+    on = set()
+    for flag in enabled:
+        on.add(flag)
+
+    # Step 2: check each needed flag against that set.
+    for flag in needed:
+        if flag not in on:
+            return False
+
+    return True
+`,
     hints: [
-      'What is the cost of `x in some_list`? It is not O(1).',
-      'The check re-walks `enabled` from the start for every flag in `needed`.',
-      'Pay once to build something with O(1) membership, then ask it many times.',
+      'What does `x in some_list` actually do? Python walks the list from the start until it finds x.',
+      'That means the check re-walks `enabled` from the beginning for every flag in `needed`.',
+      'Pay once to build something that can answer "is this in there?" without walking. A set does that.',
     ],
     skills: ['hash-map'],
     ladder: [
       {
-        label: 'the obvious one-liner',
-        code: 'def has_all(needed, enabled):\n    return all(flag in enabled for flag in needed)\n',
+        label: 'the innocent one-liner',
+        code: `def has_all(needed, enabled):
+    return all(flag in enabled for flag in needed)
+`,
         complexity: 'O(len(needed) × len(enabled))',
         diesAt: '120,000 flags × 6,000 lookups → ~10s, not milliseconds',
         insight:
-          '`in` on a list is a linear scan. Nothing in this code looks like a nested loop, but there is one hiding inside the `in`.',
+          'There is no nested loop anywhere in this line — and yet there is one. It is hiding inside the word `in`.',
+      },
+      {
+        label: 'the same thing, spelled out',
+        code: `def has_all(needed, enabled):
+    for flag in needed:
+        found = False
+        for candidate in enabled:      # <- this is what "in" was doing
+            if candidate == flag:
+                found = True
+                break
+        if not found:
+            return False
+    return True
+`,
+        complexity: 'O(len(needed) × len(enabled)) — identical to the one-liner',
+        insight:
+          'Same work, nothing hidden — the nested loop is now on the screen where you can see it, and the problem is obvious: the inner loop restarts from the top every single time. If this rung times a little slower than the one above, that is expected: `in` does the scanning down in C, while this does it in Python. Same shape, slightly heavier steps.',
       },
       {
         label: 'remember what is enabled',
-        code: 'def has_all(needed, enabled):\n    on = set(enabled)\n    return all(flag in on for flag in needed)\n',
+        code: `def has_all(needed, enabled):
+    on = set()
+    for flag in enabled:
+        on.add(flag)
+
+    for flag in needed:
+        if flag not in on:
+            return False
+    return True
+`,
         complexity: 'O(len(enabled) + len(needed)) time, O(len(enabled)) space',
         insight:
-          'One pass builds a set; every later membership question is answered in constant time. You bought time with memory.',
+          'Two loops one after the other instead of one inside the other. That is the whole fix. You spent memory on the set and bought back all that scanning.',
+      },
+      {
+        label: 'the short way (same thing)',
+        code: `def has_all(needed, enabled):
+    on = set(enabled)
+    return all(flag in on for flag in needed)
+`,
+        complexity: 'O(len(enabled) + len(needed)) — identical to the rung above',
+        insight:
+          'Once you can see the two loops in your head, this is the version you would write at work. Read it as: "make a set, then check every flag against it." Same machine, fewer keystrokes.',
       },
     ],
     wrongApproach: 'def has_all(needed, enabled):\n    return all(flag in enabled for flag in needed)\n',
     ladderDemo: `
 import time
-enabled = ["flag-%d" % i for i in range(120_000)]
-needed  = ["flag-%d" % i for i in range(0, 120_000, 20)]
+
+# Setup: a big list of enabled flags, and a page asking for many of them.
+enabled = []
+for i in range(120_000):
+    enabled.append("flag-%d" % i)
+
+needed = []
+for i in range(0, 120_000, 20):
+    needed.append("flag-%d" % i)
 
 start = time.perf_counter()
 result = has_all(needed, enabled)
 elapsed = time.perf_counter() - start
-print(f"{len(needed):,} flags checked against {len(enabled):,} enabled -> {result}")
-print(f"took {elapsed:.3f}s")
+
+print("checked", len(needed), "flags against", len(enabled), "enabled ->", result)
+print("took %.3fs" % elapsed)
 `,
     tests: `
 expect(has_all(["a"], ["a", "b"]), True, "flag is enabled")
@@ -63,7 +128,7 @@ expect(has_all(["a", "z"], ["a", "b"]), False, "one of two missing")
 
 big = ["flag-%d" % i for i in range(120_000)]
 ask = ["flag-%d" % i for i in range(0, 120_000, 20)]
-under(1.5, "stays fast on a large flag list", lambda: has_all(ask, big))
+under(2.5, "stays fast on a large flag list", lambda: has_all(ask, big))
 `,
   },
 
@@ -74,12 +139,22 @@ under(1.5, "stays fast on a large flag list", lambda: has_all(ask, big))
       'A queue consumer receives message ids and must stop the first time it sees one it has already handled. Return the first id that appears for a second time, or `None` if every id is unique.',
     origin: 'original',
     entry: 'first_repeat',
-    starter: 'def first_repeat(ids):\n    ...\n',
-    solution:
-      'def first_repeat(ids):\n    seen = set()\n    for i in ids:\n        if i in seen:\n            return i\n        seen.add(i)\n    return None\n',
+    starter: 'def first_repeat(ids):\n    # ids: message ids, in the order they arrived\n    ...\n',
+    solution: `def first_repeat(ids):
+    # Keep a record of everything handled so far.
+    seen = set()
+
+    for message_id in ids:
+        if message_id in seen:
+            return message_id      # handled this one already
+        seen.add(message_id)
+
+    return None                    # every id was unique
+`,
     hints: [
-      'You only need to answer one question per element: "have I seen this before?"',
-      'A set answers that in constant time, and you can build it as you go.',
+      'For each message you only ever ask one question: "have I already handled this?"',
+      'A set answers that without scanning, and you can add to it as you go.',
+      'Check before you add — otherwise every message finds itself.',
     ],
     skills: ['hash-map'],
     wrongApproach:
@@ -103,13 +178,40 @@ under(2.0, "stays fast on a long stream", lambda: first_repeat(big))
       'You have a list of event timestamps in seconds. Return the minute that contains the most events — a minute being `timestamp // 60`. If several tie, return the earliest.\n\nNo pattern is named for this one. Work out what the problem is really asking before you write anything.',
     origin: 'original',
     entry: 'busiest_minute',
-    starter: 'def busiest_minute(timestamps):\n    ...\n',
-    solution:
-      'def busiest_minute(timestamps):\n    if not timestamps:\n        return None\n    counts = {}\n    for t in timestamps:\n        m = t // 60\n        counts[m] = counts.get(m, 0) + 1\n    best = max(counts.values())\n    return min(m for m, c in counts.items() if c == best)\n',
+    starter: 'def busiest_minute(timestamps):\n    # timestamps: event times, in seconds\n    ...\n',
+    solution: `def busiest_minute(timestamps):
+    if len(timestamps) == 0:
+        return None
+
+    # Step 1: count how many events landed in each minute.
+    counts = {}
+    for seconds in timestamps:
+        minute = seconds // 60
+        if minute in counts:
+            counts[minute] = counts[minute] + 1
+        else:
+            counts[minute] = 1
+
+    # Step 2: find the busiest. On a tie, keep the earlier minute.
+    best_minute = None
+    best_count = 0
+    for minute in counts:
+        count = counts[minute]
+        if best_minute is None:
+            best_minute = minute
+            best_count = count
+        elif count > best_count:
+            best_minute = minute
+            best_count = count
+        elif count == best_count and minute < best_minute:
+            best_minute = minute
+
+    return best_minute
+`,
     hints: [
-      'Every timestamp belongs to exactly one bucket. What is the bucket key?',
-      'Tally per bucket in one pass, then pick the winner from the tally.',
-      'For the tie rule, take the smallest key among those holding the maximum count.',
+      'Every timestamp belongs to exactly one minute. What turns a timestamp into its minute?',
+      'Count per minute in one pass, then pick the winner from the counts in a second pass.',
+      'For the tie rule, only replace the current best when the count is higher, or the count is equal and the minute is earlier.',
     ],
     skills: ['hash-map', 'counter'],
     wrongApproach:

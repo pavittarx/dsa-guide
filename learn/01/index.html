@@ -35,103 +35,213 @@ in <a href="/dsa-guide/#s8">§8</a> — in particular that O(1) is an average, n
 grouping, a tally, and a walk over a set. They are one skill in four costumes,
 and noticing that is the actual goal of this unit.</p> </article> <section class="ladder" data-ladder-demo="
 import time
-profiles = [{&#34;id&#34;: i, &#34;name&#34;: &#34;user-%d&#34; % i} for i in range(80_000)]
-ids      = [i for i in range(0, 80_000, 66)]
+
+# Setup: a big profile table, and a request resolving many ids at once.
+profiles = []
+for i in range(80_000):
+    profiles.append({&#34;id&#34;: i, &#34;name&#34;: &#34;user-%d&#34; % i})
+
+ids = []
+for i in range(0, 80_000, 66):
+    ids.append(i)
 
 start = time.perf_counter()
 names = names_for(ids, profiles)
 elapsed = time.perf_counter() - start
-print(f&#34;{len(ids):,} ids resolved against {len(profiles):,} profiles&#34;)
-print(f&#34;first three: {names[:3]}&#34;)
-print(f&#34;took {elapsed:.3f}s&#34;)
+
+print(&#34;resolved&#34;, len(ids), &#34;ids against&#34;, len(profiles), &#34;profiles&#34;)
+print(&#34;first three:&#34;, names[:3])
+print(&#34;took %.3fs&#34; % elapsed)
 "><h3>How you get there</h3><p class="small">
 Every rung runs on the same workload, so the times are comparable. Start
         at the top and watch the cost, rather than taking the last one on faith.
-</p><article class="rung"><header class="rung-head"><span class="tag">1 · scan for each id</span><span class="rung-cost">O(len(ids) × len(profiles))</span></header><pre class="rung-code"><code>def names_for(ids, profiles):
-    out = []
-    for i in ids:
-        for p in profiles:
-            if p[&quot;id&quot;] == i:
-                out.append(p[&quot;name&quot;])
+</p><article class="rung"><header class="rung-head"><span class="tag">1 · search for each id</span><span class="rung-cost">O(len(ids) × len(profiles))</span></header><pre class="rung-code"><code>def names_for(ids, profiles):
+    names = []
+    for user_id in ids:
+        for profile in profiles:          # restarts from the top every time
+            if profile[&quot;id&quot;] == user_id:
+                names.append(profile[&quot;name&quot;])
                 break
-    return out
+    return names
 </code></pre><div class="rung-bar"><button class="runbtn" type="button" data-act="run-rung">
 ▸ Run
-</button><span class="rung-dies">dies at 80,000 profiles × 1,200 ids → seconds per request</span><span class="rung-status"></span></div><pre class="rung-out" hidden></pre><p class="rung-insight">Every id re-reads the profile list from the top. The list already held the answer the first time through.</p></article><article class="rung"><header class="rung-head"><span class="tag">2 · index once, look up many</span><span class="rung-cost">O(len(profiles) + len(ids)) time, O(len(profiles)) space</span></header><pre class="rung-code"><code>def names_for(ids, profiles):
-    by_id = {p[&quot;id&quot;]: p[&quot;name&quot;] for p in profiles}
-    return [by_id[i] for i in ids]
+</button><span class="rung-dies">dies at 80,000 profiles × 1,200 ids → seconds per request</span><span class="rung-status"></span></div><pre class="rung-out" hidden></pre><p class="rung-insight">The inner loop starts over for every id. By the time you resolve the last one you have read the same records a thousand times.</p></article><article class="rung"><header class="rung-head"><span class="tag">2 · index once, look up many</span><span class="rung-cost">O(len(profiles) + len(ids)) time, O(len(profiles)) space</span></header><pre class="rung-code"><code>def names_for(ids, profiles):
+    name_of = {}
+    for profile in profiles:
+        name_of[profile[&quot;id&quot;]] = profile[&quot;name&quot;]
+
+    names = []
+    for user_id in ids:
+        names.append(name_of[user_id])
+    return names
 </code></pre><div class="rung-bar"><button class="runbtn" type="button" data-act="run-rung">
 ▸ Run
-</button><span class="rung-status"></span></div><pre class="rung-out" hidden></pre><p class="rung-insight">One pass to build the index, then constant-time answers. This is the same shape as the classic pair-sum trick, and as the N+1 query in your ORM.</p></article></section> <h2 class="slot-head">Guided</h2> <section class="problem" data-problem-id="u01-lookup-service" data-required="true" data-slot="ladder" id="p-u01-lookup-service"> <header class="problem-head"> <span class="tag">guided</span> <h3>One query, then two hundred more</h3> </header> <div class="problem-statement"> <p>An endpoint takes a list of user ids and returns each user's display name. `profiles` is the full list of profile records, each a dict with `"id"` and `"name"`. Return the names in the same order the ids were given.</p><p>Assume every id exists in `profiles`.</p> </div> <p class="small"> <a href="https://leetcode.com/problems/two-sum/" rel="noopener noreferrer" target="_blank">Related: Two Sum (the same &quot;look it up instead of scanning&quot; move)</a> </p> <textarea class="problem-editor" spellcheck="false" aria-label="Solution for One query, then two hundred more">def names_for(ids, profiles):
+</button><span class="rung-status"></span></div><pre class="rung-out" hidden></pre><p class="rung-insight">One loop to build the index, one loop to use it — side by side instead of nested. This is the same move as the classic pair-sum trick, and the same fix as an N+1 query in your ORM.</p></article><article class="rung"><header class="rung-head"><span class="tag">3 · the short way (same thing)</span><span class="rung-cost">O(len(profiles) + len(ids)) — identical to the rung above</span></header><pre class="rung-code"><code>def names_for(ids, profiles):
+    name_of = {p[&quot;id&quot;]: p[&quot;name&quot;] for p in profiles}
+    return [name_of[i] for i in ids]
+</code></pre><div class="rung-bar"><button class="runbtn" type="button" data-act="run-rung">
+▸ Run
+</button><span class="rung-status"></span></div><pre class="rung-out" hidden></pre><p class="rung-insight">A dict comprehension is just that first loop, written on one line. Read it right-to-left: &quot;for every profile, map its id to its name.&quot; The second line is the same trick for the output list.</p></article></section> <h2 class="slot-head">Guided</h2> <section class="problem" data-problem-id="u01-lookup-service" data-required="true" data-slot="ladder" id="p-u01-lookup-service"> <header class="problem-head"> <span class="tag">guided</span> <h3>One query, then two hundred more</h3> </header> <div class="problem-statement"> <p>An endpoint takes a list of user ids and returns each user's display name. `profiles` is the full list of profile records, each a dict with `"id"` and `"name"`. Return the names in the same order the ids were given.</p><p>Assume every id exists in `profiles`.</p> </div> <p class="small"> <a href="https://leetcode.com/problems/two-sum/" rel="noopener noreferrer" target="_blank">Related: Two Sum (the same &quot;look it up instead of scanning&quot; move)</a> </p> <textarea class="problem-editor" spellcheck="false" aria-label="Solution for One query, then two hundred more">def names_for(ids, profiles):
+    # ids:      user ids to resolve, in order
     # profiles: [{&quot;id&quot;: 1, &quot;name&quot;: &quot;ada&quot;}, ...]
     ...
 </textarea> <div class="problem-bar"> <button class="runbtn primary" type="button" data-act="submit">▸ Submit</button> <button class="runbtn" type="button" data-act="run">Run</button> <button class="runbtn" type="button" data-act="hint">Hint</button> <button class="runbtn" type="button" data-act="reset">Reset</button> <button class="runbtn danger" type="button" data-act="stop" hidden>■ Stop</button> <span class="problem-status"></span> </div> <div class="problem-hints" hidden></div> <ol class="problem-results" hidden></ol> <pre class="problem-out" tabindex="0" hidden></pre> <details class="problem-solution" hidden> <summary>Reference solution</summary> <pre><code>def names_for(ids, profiles):
-    by_id = {p[&quot;id&quot;]: p[&quot;name&quot;] for p in profiles}
-    return [by_id[i] for i in ids]
-</code></pre> </details> <script type="application/json" class="problem-data">{"tests":"\nP = [{\"id\": 1, \"name\": \"ada\"}, {\"id\": 2, \"name\": \"grace\"}, {\"id\": 3, \"name\": \"alan\"}]\nexpect(names_for([2, 1], P), [\"grace\", \"ada\"], \"order follows the ids\")\nexpect(names_for([], P), [], \"no ids\")\nexpect(names_for([3, 3], P), [\"alan\", \"alan\"], \"repeated id\")\nexpect(names_for([1, 2, 3], P), [\"ada\", \"grace\", \"alan\"], \"all of them\")\n\nbig = [{\"id\": i, \"name\": \"user-%d\" % i} for i in range(80_000)]\nask = [i for i in range(0, 80_000, 66)]\nunder(1.5, \"stays fast at 80k profiles\", lambda: names_for(ask, big))\n","hints":["For each id you are searching the whole profile list. How many times do you re-read the same records?","The profile list does not change while you work. Index it once.","A dict from id to name costs one pass and makes every lookup constant."],"entry":"names_for"}</script> </section>  <h2 class="slot-head">Varied practice</h2> <p class="small">Different jobs on the surface. The same move underneath.</p> <section class="problem" data-problem-id="u01-canonical-skus" data-required="true" data-slot="varied" id="p-u01-canonical-skus"> <header class="problem-head"> <span class="tag">varied practice</span> <h3>The same product, three spellings</h3> </header> <div class="problem-statement"> <p>A catalogue import produced SKU codes whose letters were shuffled by an upstream system: `"abc"`, `"cab"` and `"bca"` are all the same product. Group them.</p><p>Return a list of groups. Sort each group alphabetically, and sort the list of groups by its first element, so the result is deterministic.</p> </div> <p class="small"> <a href="https://leetcode.com/problems/group-anagrams/" rel="noopener noreferrer" target="_blank">Related: Group Anagrams</a> </p> <textarea class="problem-editor" spellcheck="false" aria-label="Solution for The same product, three spellings">def group_skus(skus):
+    # Step 1: index the profiles once, id -&gt; name.
+    name_of = {}
+    for profile in profiles:
+        user_id = profile[&quot;id&quot;]
+        name_of[user_id] = profile[&quot;name&quot;]
+
+    # Step 2: answer each id with a direct lookup.
+    names = []
+    for user_id in ids:
+        names.append(name_of[user_id])
+
+    return names
+</code></pre> </details> <script type="application/json" class="problem-data">{"tests":"\nP = [{\"id\": 1, \"name\": \"ada\"}, {\"id\": 2, \"name\": \"grace\"}, {\"id\": 3, \"name\": \"alan\"}]\nexpect(names_for([2, 1], P), [\"grace\", \"ada\"], \"order follows the ids\")\nexpect(names_for([], P), [], \"no ids\")\nexpect(names_for([3, 3], P), [\"alan\", \"alan\"], \"repeated id\")\nexpect(names_for([1, 2, 3], P), [\"ada\", \"grace\", \"alan\"], \"all of them\")\n\nbig = [{\"id\": i, \"name\": \"user-%d\" % i} for i in range(80_000)]\nask = [i for i in range(0, 80_000, 66)]\nunder(1.5, \"stays fast at 80k profiles\", lambda: names_for(ask, big))\n","hints":["For each id you are searching the whole profile list. How many times does the same record get re-read?","The profile list does not change while you work, so the searching is wasted effort. Index it once.","A dict from id to name costs one pass to build and makes every later lookup direct."],"entry":"names_for"}</script> </section>  <h2 class="slot-head">Varied practice</h2> <p class="small">Different jobs on the surface. The same move underneath.</p> <section class="problem" data-problem-id="u01-canonical-skus" data-required="true" data-slot="varied" id="p-u01-canonical-skus"> <header class="problem-head"> <span class="tag">varied practice</span> <h3>The same product, three spellings</h3> </header> <div class="problem-statement"> <p>A catalogue import produced SKU codes whose letters were shuffled by an upstream system: `"abc"`, `"cab"` and `"bca"` are all the same product. Group them.</p><p>Return a list of groups. Sort each group alphabetically, and sort the list of groups by its first element, so the result is deterministic.</p> </div> <p class="small"> <a href="https://leetcode.com/problems/group-anagrams/" rel="noopener noreferrer" target="_blank">Related: Group Anagrams</a> </p> <textarea class="problem-editor" spellcheck="false" aria-label="Solution for The same product, three spellings">def group_skus(skus):
+    # skus: list of code strings
     ...
 </textarea> <div class="problem-bar"> <button class="runbtn primary" type="button" data-act="submit">▸ Submit</button> <button class="runbtn" type="button" data-act="run">Run</button> <button class="runbtn" type="button" data-act="hint">Hint</button> <button class="runbtn" type="button" data-act="reset">Reset</button> <button class="runbtn danger" type="button" data-act="stop" hidden>■ Stop</button> <span class="problem-status"></span> </div> <div class="problem-hints" hidden></div> <ol class="problem-results" hidden></ol> <pre class="problem-out" tabindex="0" hidden></pre> <details class="problem-solution" hidden> <summary>Reference solution</summary> <pre><code>def group_skus(skus):
-    buckets = {}
-    for s in skus:
-        key = &quot;&quot;.join(sorted(s))
-        buckets.setdefault(key, []).append(s)
-    return sorted([sorted(g) for g in buckets.values()])
-</code></pre> </details> <script type="application/json" class="problem-data">{"tests":"\nexpect(group_skus([\"abc\", \"cab\", \"xy\"]), [[\"abc\", \"cab\"], [\"xy\"]], \"two groups\")\nexpect(group_skus([]), [], \"nothing to group\")\nexpect(group_skus([\"a\"]), [[\"a\"]], \"single sku\")\nexpect(group_skus([\"ab\", \"ba\", \"ab\"]), [[\"ab\", \"ab\", \"ba\"]], \"duplicates stay\")\nexpect(group_skus([\"ab\", \"cd\"]), [[\"ab\"], [\"cd\"]], \"no shared group\")\n\nbig = [\"\".join(sorted(\"sku%d\" % (i % 5000))) for i in range(60_000)]\nunder(5.0, \"stays fast on a big catalogue\", lambda: group_skus(big))\n","hints":["Two SKUs belong together when something computed from them is equal. What is that something?","Sorting the letters of a code gives every member of a group the same key.","Bucket by that key with a dict, then tidy the output for determinism."],"entry":"group_skus"}</script> </section><section class="problem" data-problem-id="u01-top-error" data-required="true" data-slot="varied" id="p-u01-top-error"> <header class="problem-head"> <span class="tag">varied practice</span> <h3>What is actually failing?</h3> </header> <div class="problem-statement"> <p>Given a list of error codes from the last hour, return the code that appears most often. If several tie, return the one that is alphabetically first.</p> </div>  <textarea class="problem-editor" spellcheck="false" aria-label="Solution for What is actually failing?">def top_error(codes):
+    # Step 1: two skus belong together when their letters, sorted, match.
+    # So use that sorted string as the bucket key.
+    groups = {}
+    for sku in skus:
+        letters = sorted(sku)          # e.g. &quot;cab&quot; -&gt; [&quot;a&quot;, &quot;b&quot;, &quot;c&quot;]
+        key = &quot;&quot;.join(letters)         # -&gt; &quot;abc&quot;
+        if key not in groups:
+            groups[key] = []
+        groups[key].append(sku)
+
+    # Step 2: tidy the output so the answer is deterministic.
+    result = []
+    for key in groups:
+        group = sorted(groups[key])
+        result.append(group)
+    result.sort()
+
+    return result
+</code></pre> </details> <script type="application/json" class="problem-data">{"tests":"\nexpect(group_skus([\"abc\", \"cab\", \"xy\"]), [[\"abc\", \"cab\"], [\"xy\"]], \"two groups\")\nexpect(group_skus([]), [], \"nothing to group\")\nexpect(group_skus([\"a\"]), [[\"a\"]], \"single sku\")\nexpect(group_skus([\"ab\", \"ba\", \"ab\"]), [[\"ab\", \"ab\", \"ba\"]], \"duplicates stay\")\nexpect(group_skus([\"ab\", \"cd\"]), [[\"ab\"], [\"cd\"]], \"no shared group\")\n\nbig = [\"\".join(sorted(\"sku%d\" % (i % 5000))) for i in range(60_000)]\nunder(5.0, \"stays fast on a big catalogue\", lambda: group_skus(big))\n","hints":["Two SKUs belong together when something you can compute from each of them is equal. What is that something?","Sorting the letters of a code gives every member of a group the same string.","Use that string as a dict key and append each sku into its bucket."],"entry":"group_skus"}</script> </section><section class="problem" data-problem-id="u01-top-error" data-required="true" data-slot="varied" id="p-u01-top-error"> <header class="problem-head"> <span class="tag">varied practice</span> <h3>What is actually failing?</h3> </header> <div class="problem-statement"> <p>Given a list of error codes from the last hour, return the code that appears most often. If several tie, return the one that is alphabetically first.</p> </div>  <textarea class="problem-editor" spellcheck="false" aria-label="Solution for What is actually failing?">def top_error(codes):
+    # codes: error codes seen in the last hour
     ...
 </textarea> <div class="problem-bar"> <button class="runbtn primary" type="button" data-act="submit">▸ Submit</button> <button class="runbtn" type="button" data-act="run">Run</button> <button class="runbtn" type="button" data-act="hint">Hint</button> <button class="runbtn" type="button" data-act="reset">Reset</button> <button class="runbtn danger" type="button" data-act="stop" hidden>■ Stop</button> <span class="problem-status"></span> </div> <div class="problem-hints" hidden></div> <ol class="problem-results" hidden></ol> <pre class="problem-out" tabindex="0" hidden></pre> <details class="problem-solution" hidden> <summary>Reference solution</summary> <pre><code>def top_error(codes):
-    if not codes:
+    if len(codes) == 0:
         return None
+
+    # Step 1: tally how many times each code appeared.
     counts = {}
-    for c in codes:
-        counts[c] = counts.get(c, 0) + 1
-    best = max(counts.values())
-    return min(c for c, n in counts.items() if n == best)
-</code></pre> </details> <script type="application/json" class="problem-data">{"tests":"\nexpect(top_error([\"500\", \"404\", \"500\"]), \"500\", \"clear winner\")\nexpect(top_error([\"404\", \"500\"]), \"404\", \"tie goes alphabetical\")\nexpect(top_error([]), None, \"no errors\")\nexpect(top_error([\"a\"]), \"a\", \"single code\")\nexpect(top_error([\"b\", \"b\", \"a\", \"a\"]), \"a\", \"tie at the top\")\n\nbig = [\"code-%d\" % (i % 900) for i in range(8_000)]\nunder(0.5, \"stays fast on an hour of logs\", lambda: top_error(big))\n","hints":["One pass to tally, one pass over the tally to pick a winner.","The tie rule is a `min` over just the codes that share the top count."],"entry":"top_error"}</script> </section><section class="problem" data-problem-id="u01-active-streak" data-required="true" data-slot="varied" id="p-u01-active-streak"> <header class="problem-head"> <span class="tag">varied practice</span> <h3>The longest run of active days</h3> </header> <div class="problem-statement"> <p>You have the day numbers on which a user was active, unsorted and possibly with duplicates. Return the length of the longest run of consecutive days.</p><p>Sorting would solve it. Solve it without sorting — the input is large and the scan must stay linear.</p> </div> <p class="small"> <a href="https://leetcode.com/problems/longest-consecutive-sequence/" rel="noopener noreferrer" target="_blank">Related: Longest Consecutive Sequence</a> </p> <textarea class="problem-editor" spellcheck="false" aria-label="Solution for The longest run of active days">def longest_streak(days):
+    for code in codes:
+        if code in counts:
+            counts[code] = counts[code] + 1
+        else:
+            counts[code] = 1
+
+    # Step 2: pick the winner. On a tie, the alphabetically first code wins.
+    best_code = None
+    best_count = 0
+    for code in counts:
+        count = counts[code]
+        if best_code is None:
+            best_code = code
+            best_count = count
+        elif count &gt; best_count:
+            best_code = code
+            best_count = count
+        elif count == best_count and code &lt; best_code:
+            best_code = code
+
+    return best_code
+</code></pre> </details> <script type="application/json" class="problem-data">{"tests":"\nexpect(top_error([\"500\", \"404\", \"500\"]), \"500\", \"clear winner\")\nexpect(top_error([\"404\", \"500\"]), \"404\", \"tie goes alphabetical\")\nexpect(top_error([]), None, \"no errors\")\nexpect(top_error([\"a\"]), \"a\", \"single code\")\nexpect(top_error([\"b\", \"b\", \"a\", \"a\"]), \"a\", \"tie at the top\")\n\nbig = [\"code-%d\" % (i % 900) for i in range(8_000)]\nunder(0.5, \"stays fast on an hour of logs\", lambda: top_error(big))\n","hints":["One pass to tally, then one pass over the tally to pick a winner.","Do not scan the original list again to count — that is the slow way.","For the tie, only replace the best when the count is higher, or equal and the code sorts earlier."],"entry":"top_error"}</script> </section><section class="problem" data-problem-id="u01-active-streak" data-required="true" data-slot="varied" id="p-u01-active-streak"> <header class="problem-head"> <span class="tag">varied practice</span> <h3>The longest run of active days</h3> </header> <div class="problem-statement"> <p>You have the day numbers on which a user was active, unsorted and possibly with duplicates. Return the length of the longest run of consecutive days.</p><p>Sorting would solve it. Solve it without sorting — the input is large and the scan must stay linear.</p> </div> <p class="small"> <a href="https://leetcode.com/problems/longest-consecutive-sequence/" rel="noopener noreferrer" target="_blank">Related: Longest Consecutive Sequence</a> </p> <textarea class="problem-editor" spellcheck="false" aria-label="Solution for The longest run of active days">def longest_streak(days):
+    # days: day numbers the user was active, unsorted
     ...
 </textarea> <div class="problem-bar"> <button class="runbtn primary" type="button" data-act="submit">▸ Submit</button> <button class="runbtn" type="button" data-act="run">Run</button> <button class="runbtn" type="button" data-act="hint">Hint</button> <button class="runbtn" type="button" data-act="reset">Reset</button> <button class="runbtn danger" type="button" data-act="stop" hidden>■ Stop</button> <span class="problem-status"></span> </div> <div class="problem-hints" hidden></div> <ol class="problem-results" hidden></ol> <pre class="problem-out" tabindex="0" hidden></pre> <details class="problem-solution" hidden> <summary>Reference solution</summary> <pre><code>def longest_streak(days):
-    have = set(days)
+    # A set makes &quot;was the user active on day X?&quot; free to ask.
+    active = set(days)
+
     best = 0
-    for d in have:
-        if d - 1 in have:
-            continue          # not the start of a run
+    for day in active:
+        # Only start counting from the FIRST day of a run.
+        # Without this guard we would re-walk the same run from every
+        # day inside it, which is what makes the naive version quadratic.
+        if day - 1 in active:
+            continue
+
         length = 1
-        while d + length in have:
-            length += 1
-        best = max(best, length)
+        next_day = day + 1
+        while next_day in active:
+            length = length + 1
+            next_day = next_day + 1
+
+        if length &gt; best:
+            best = length
+
     return best
-</code></pre> </details> <script type="application/json" class="problem-data">{"tests":"\nexpect(longest_streak([100, 4, 200, 1, 3, 2]), 4, \"1,2,3,4\")\nexpect(longest_streak([]), 0, \"never active\")\nexpect(longest_streak([5]), 1, \"one day\")\nexpect(longest_streak([1, 1, 2]), 2, \"duplicates do not extend a run\")\nexpect(longest_streak([9, 7]), 1, \"no consecutive days\")\n\n# The guard matters: without it this input is quadratic.\nbig = list(range(6_000))\nunder(0.5, \"stays linear on one long run\", lambda: longest_streak(big))\n","hints":["Put everything in a set first, so \"is this day present?\" is free.","Walking up from every day is quadratic. Only walk from a day that starts a run.","A day starts a run when `d - 1` is not in the set."],"entry":"longest_streak"}</script> </section>  <h2 class="slot-head">Retrieval</h2> <p class="small">
+</code></pre> </details> <script type="application/json" class="problem-data">{"tests":"\nexpect(longest_streak([100, 4, 200, 1, 3, 2]), 4, \"1,2,3,4\")\nexpect(longest_streak([]), 0, \"never active\")\nexpect(longest_streak([5]), 1, \"one day\")\nexpect(longest_streak([1, 1, 2]), 2, \"duplicates do not extend a run\")\nexpect(longest_streak([9, 7]), 1, \"no consecutive days\")\n\n# The guard matters: without it this input is quadratic.\nbig = list(range(6_000))\nunder(0.5, \"stays linear on one long run\", lambda: longest_streak(big))\n","hints":["Put the days in a set first, so checking whether a day is present costs nothing.","Walking upward from every day is quadratic. Walk only from days that begin a run.","A day begins a run when the day before it is not in the set."],"entry":"longest_streak"}</script> </section>  <h2 class="slot-head">Retrieval</h2> <p class="small">
 From earlier units. These do not gate this unit — they are here because
             pulling something back out of memory is what makes it stay.
 </p> <section class="problem" data-problem-id="u00-first-repeat" data-required="false" data-slot="retrieval" id="p-u00-first-repeat"> <header class="problem-head"> <span class="tag">retrieval</span> <h3>The delivery that arrived twice</h3> </header> <div class="problem-statement"> <p>A queue consumer receives message ids and must stop the first time it sees one it has already handled. Return the first id that appears for a second time, or `None` if every id is unique.</p> </div>  <textarea class="problem-editor" spellcheck="false" aria-label="Solution for The delivery that arrived twice">def first_repeat(ids):
+    # ids: message ids, in the order they arrived
     ...
 </textarea> <div class="problem-bar"> <button class="runbtn primary" type="button" data-act="submit">▸ Submit</button> <button class="runbtn" type="button" data-act="run">Run</button> <button class="runbtn" type="button" data-act="hint">Hint</button> <button class="runbtn" type="button" data-act="reset">Reset</button> <button class="runbtn danger" type="button" data-act="stop" hidden>■ Stop</button> <span class="problem-status"></span> </div> <div class="problem-hints" hidden></div> <ol class="problem-results" hidden></ol> <pre class="problem-out" tabindex="0" hidden></pre> <details class="problem-solution" hidden> <summary>Reference solution</summary> <pre><code>def first_repeat(ids):
+    # Keep a record of everything handled so far.
     seen = set()
-    for i in ids:
-        if i in seen:
-            return i
-        seen.add(i)
-    return None
-</code></pre> </details> <script type="application/json" class="problem-data">{"tests":"\nexpect(first_repeat([1, 2, 3, 2, 1]), 2, \"first repeat is 2\")\nexpect(first_repeat([1, 2, 3]), None, \"all unique\")\nexpect(first_repeat([]), None, \"empty\")\nexpect(first_repeat([\"a\", \"b\", \"a\"]), \"a\", \"works on strings\")\nexpect(first_repeat([5, 5]), 5, \"immediate repeat\")\n\nbig = list(range(150_000)) + [7]\nunder(2.0, \"stays fast on a long stream\", lambda: first_repeat(big))\n","hints":["You only need to answer one question per element: \"have I seen this before?\"","A set answers that in constant time, and you can build it as you go."],"entry":"first_repeat"}</script> </section><section class="problem" data-problem-id="u00-busiest-minute" data-required="false" data-slot="retrieval" id="p-u00-busiest-minute"> <header class="problem-head"> <span class="tag">retrieval</span> <h3>Which minute hurt?</h3> </header> <div class="problem-statement"> <p>You have a list of event timestamps in seconds. Return the minute that contains the most events — a minute being `timestamp // 60`. If several tie, return the earliest.</p><p>No pattern is named for this one. Work out what the problem is really asking before you write anything.</p> </div>  <textarea class="problem-editor" spellcheck="false" aria-label="Solution for Which minute hurt?">def busiest_minute(timestamps):
+
+    for message_id in ids:
+        if message_id in seen:
+            return message_id      # handled this one already
+        seen.add(message_id)
+
+    return None                    # every id was unique
+</code></pre> </details> <script type="application/json" class="problem-data">{"tests":"\nexpect(first_repeat([1, 2, 3, 2, 1]), 2, \"first repeat is 2\")\nexpect(first_repeat([1, 2, 3]), None, \"all unique\")\nexpect(first_repeat([]), None, \"empty\")\nexpect(first_repeat([\"a\", \"b\", \"a\"]), \"a\", \"works on strings\")\nexpect(first_repeat([5, 5]), 5, \"immediate repeat\")\n\nbig = list(range(150_000)) + [7]\nunder(2.0, \"stays fast on a long stream\", lambda: first_repeat(big))\n","hints":["For each message you only ever ask one question: \"have I already handled this?\"","A set answers that without scanning, and you can add to it as you go.","Check before you add — otherwise every message finds itself."],"entry":"first_repeat"}</script> </section><section class="problem" data-problem-id="u00-busiest-minute" data-required="false" data-slot="retrieval" id="p-u00-busiest-minute"> <header class="problem-head"> <span class="tag">retrieval</span> <h3>Which minute hurt?</h3> </header> <div class="problem-statement"> <p>You have a list of event timestamps in seconds. Return the minute that contains the most events — a minute being `timestamp // 60`. If several tie, return the earliest.</p><p>No pattern is named for this one. Work out what the problem is really asking before you write anything.</p> </div>  <textarea class="problem-editor" spellcheck="false" aria-label="Solution for Which minute hurt?">def busiest_minute(timestamps):
+    # timestamps: event times, in seconds
     ...
 </textarea> <div class="problem-bar"> <button class="runbtn primary" type="button" data-act="submit">▸ Submit</button> <button class="runbtn" type="button" data-act="run">Run</button> <button class="runbtn" type="button" data-act="hint">Hint</button> <button class="runbtn" type="button" data-act="reset">Reset</button> <button class="runbtn danger" type="button" data-act="stop" hidden>■ Stop</button> <span class="problem-status"></span> </div> <div class="problem-hints" hidden></div> <ol class="problem-results" hidden></ol> <pre class="problem-out" tabindex="0" hidden></pre> <details class="problem-solution" hidden> <summary>Reference solution</summary> <pre><code>def busiest_minute(timestamps):
-    if not timestamps:
+    if len(timestamps) == 0:
         return None
+
+    # Step 1: count how many events landed in each minute.
     counts = {}
-    for t in timestamps:
-        m = t // 60
-        counts[m] = counts.get(m, 0) + 1
-    best = max(counts.values())
-    return min(m for m, c in counts.items() if c == best)
-</code></pre> </details> <script type="application/json" class="problem-data">{"tests":"\nexpect(busiest_minute([0, 1, 2, 61]), 0, \"minute 0 has three\")\nexpect(busiest_minute([61, 62, 0]), 1, \"minute 1 has two\")\nexpect(busiest_minute([]), None, \"no events\")\nexpect(busiest_minute([0, 60]), 0, \"tie picks the earliest\")\nexpect(busiest_minute([120, 121, 60]), 2, \"later minute can win\")\n\n# Correctness catches the wrong approach here, so this is only a guard\n# against something absurdly slow — hence the generous limit.\nbig = [i for i in range(200_000)] + [90] * 10\nunder(5.0, \"stays fast on a long day\", lambda: busiest_minute(big))\n","hints":["Every timestamp belongs to exactly one bucket. What is the bucket key?","Tally per bucket in one pass, then pick the winner from the tally.","For the tie rule, take the smallest key among those holding the maximum count."],"entry":"busiest_minute"}</script> </section>  <h2 class="slot-head">Transfer</h2> <p class="small">No pattern is named. Choosing it is the skill.</p> <section class="problem" data-problem-id="u01-first-unique" data-required="true" data-slot="transfer" id="p-u01-first-unique"> <header class="problem-head"> <span class="tag">transfer — pattern not named</span> <h3>The one that only happened once</h3> </header> <div class="problem-statement"> <p>A support tool needs the first request id in a log that appears exactly once in the whole log. Return it, or `None` if every id repeats.</p><p>No pattern is named here. Decide what to reach for before you start typing.</p> </div>  <textarea class="problem-editor" spellcheck="false" aria-label="Solution for The one that only happened once">def first_unique(ids):
+    for seconds in timestamps:
+        minute = seconds // 60
+        if minute in counts:
+            counts[minute] = counts[minute] + 1
+        else:
+            counts[minute] = 1
+
+    # Step 2: find the busiest. On a tie, keep the earlier minute.
+    best_minute = None
+    best_count = 0
+    for minute in counts:
+        count = counts[minute]
+        if best_minute is None:
+            best_minute = minute
+            best_count = count
+        elif count &gt; best_count:
+            best_minute = minute
+            best_count = count
+        elif count == best_count and minute &lt; best_minute:
+            best_minute = minute
+
+    return best_minute
+</code></pre> </details> <script type="application/json" class="problem-data">{"tests":"\nexpect(busiest_minute([0, 1, 2, 61]), 0, \"minute 0 has three\")\nexpect(busiest_minute([61, 62, 0]), 1, \"minute 1 has two\")\nexpect(busiest_minute([]), None, \"no events\")\nexpect(busiest_minute([0, 60]), 0, \"tie picks the earliest\")\nexpect(busiest_minute([120, 121, 60]), 2, \"later minute can win\")\n\n# Correctness catches the wrong approach here, so this is only a guard\n# against something absurdly slow — hence the generous limit.\nbig = [i for i in range(200_000)] + [90] * 10\nunder(5.0, \"stays fast on a long day\", lambda: busiest_minute(big))\n","hints":["Every timestamp belongs to exactly one minute. What turns a timestamp into its minute?","Count per minute in one pass, then pick the winner from the counts in a second pass.","For the tie rule, only replace the current best when the count is higher, or the count is equal and the minute is earlier."],"entry":"busiest_minute"}</script> </section>  <h2 class="slot-head">Transfer</h2> <p class="small">No pattern is named. Choosing it is the skill.</p> <section class="problem" data-problem-id="u01-first-unique" data-required="true" data-slot="transfer" id="p-u01-first-unique"> <header class="problem-head"> <span class="tag">transfer — pattern not named</span> <h3>The one that only happened once</h3> </header> <div class="problem-statement"> <p>A support tool needs the first request id in a log that appears exactly once in the whole log. Return it, or `None` if every id repeats.</p><p>No pattern is named here. Decide what to reach for before you start typing.</p> </div>  <textarea class="problem-editor" spellcheck="false" aria-label="Solution for The one that only happened once">def first_unique(ids):
+    # ids: request ids, in the order they were logged
     ...
 </textarea> <div class="problem-bar"> <button class="runbtn primary" type="button" data-act="submit">▸ Submit</button> <button class="runbtn" type="button" data-act="run">Run</button> <button class="runbtn" type="button" data-act="hint">Hint</button> <button class="runbtn" type="button" data-act="reset">Reset</button> <button class="runbtn danger" type="button" data-act="stop" hidden>■ Stop</button> <span class="problem-status"></span> </div> <div class="problem-hints" hidden></div> <ol class="problem-results" hidden></ol> <pre class="problem-out" tabindex="0" hidden></pre> <details class="problem-solution" hidden> <summary>Reference solution</summary> <pre><code>def first_unique(ids):
+    # Pass 1: you cannot know an id is unique until you have seen the
+    # whole log, so count everything first.
     counts = {}
-    for i in ids:
-        counts[i] = counts.get(i, 0) + 1
-    for i in ids:
-        if counts[i] == 1:
-            return i
+    for request_id in ids:
+        if request_id in counts:
+            counts[request_id] = counts[request_id] + 1
+        else:
+            counts[request_id] = 1
+
+    # Pass 2: walk the log in its original order and return the first
+    # id whose count is one.
+    for request_id in ids:
+        if counts[request_id] == 1:
+            return request_id
+
     return None
-</code></pre> </details> <script type="application/json" class="problem-data">{"tests":"\nexpect(first_unique([\"a\", \"b\", \"a\"]), \"b\", \"b is unique\")\nexpect(first_unique([\"a\", \"a\"]), None, \"everything repeats\")\nexpect(first_unique([]), None, \"empty log\")\nexpect(first_unique([\"x\"]), \"x\", \"single entry\")\nexpect(first_unique([\"a\", \"b\", \"b\", \"a\", \"c\"]), \"c\", \"unique appears last\")\n\nbig = [\"id-%d\" % (i % 3_000) for i in range(6_000)] + [\"only-me\"]\nunder(0.5, \"stays fast on a long log\", lambda: first_unique(big))\n","hints":["You cannot know an id is unique until you have seen the whole log.","That suggests two passes: one to learn, one to answer.","Order matters for the answer, so the second pass walks the original list, not the tally."],"entry":"first_unique"}</script> </section>  <section class="inv-panel"> <h2 class="slot-head">Added to your inventory</h2> <div class="card"> <span class="tag">remember</span> <p><strong>Hash map / set</strong> — O(1) average insert and lookup</p> <p class="small">Answer &quot;have I seen this?&quot;, &quot;how many of each?&quot;, and &quot;where is it?&quot; without re-scanning. Solves more real problems than everything else here combined.</p> </div><div class="card"> <span class="tag">remember</span> <p><strong>Counting &amp; grouping</strong> — O(n) to build</p> <p class="small">Tally occurrences or bucket items by a computed key. Turns &quot;are these anagrams&quot;, &quot;most common error&quot;, and &quot;group by shape&quot; into two lines.</p> </div> <p class="small"><a href="/dsa-guide/inventory">See the whole inventory →</a></p> </section> <div id="unit-complete" hidden class="card win"> <span class="tag">unit complete</span> <p>Everything required here passes. The next unit is unlocked.</p> <p><a class="runbtn primary" href="/dsa-guide/learn">Back to the map</a></p> </div> </div> </div> <p id="storage-notice" hidden class="small">
+</code></pre> </details> <script type="application/json" class="problem-data">{"tests":"\nexpect(first_unique([\"a\", \"b\", \"a\"]), \"b\", \"b is unique\")\nexpect(first_unique([\"a\", \"a\"]), None, \"everything repeats\")\nexpect(first_unique([]), None, \"empty log\")\nexpect(first_unique([\"x\"]), \"x\", \"single entry\")\nexpect(first_unique([\"a\", \"b\", \"b\", \"a\", \"c\"]), \"c\", \"unique appears last\")\n\nbig = [\"id-%d\" % (i % 3_000) for i in range(6_000)] + [\"only-me\"]\nunder(0.5, \"stays fast on a long log\", lambda: first_unique(big))\n","hints":["You cannot decide whether the first id is unique until you have read the whole log.","That points at two passes: one to learn the counts, one to answer.","The answer depends on order, so the second pass walks the original list — not the dict."],"entry":"first_unique"}</script> </section>  <section class="inv-panel"> <h2 class="slot-head">Added to your inventory</h2> <div class="card"> <span class="tag">remember</span> <p><strong>Hash map / set</strong> — O(1) average insert and lookup</p> <p class="small">Answer &quot;have I seen this?&quot;, &quot;how many of each?&quot;, and &quot;where is it?&quot; without re-scanning. Solves more real problems than everything else here combined.</p> </div><div class="card"> <span class="tag">remember</span> <p><strong>Counting &amp; grouping</strong> — O(n) to build</p> <p class="small">Tally occurrences or bucket items by a computed key. Turns &quot;are these anagrams&quot;, &quot;most common error&quot;, and &quot;group by shape&quot; into two lines.</p> </div> <p class="small"><a href="/dsa-guide/inventory">See the whole inventory →</a></p> </section> <div id="unit-complete" hidden class="card win"> <span class="tag">unit complete</span> <p>Everything required here passes. The next unit is unlocked.</p> <p><a class="runbtn primary" href="/dsa-guide/learn">Back to the map</a></p> </div> </div> </div> <p id="storage-notice" hidden class="small">
 This browser won't let the page save progress, so it will be lost when you leave.
 </p> <script type="module" src="/dsa-guide/_astro/CourseRuntime.astro_astro_type_script_index_0_lang.56apVkNv.js"></script>  </div> <script type="module" src="/dsa-guide/_astro/CodeRunner.astro_astro_type_script_index_0_lang.BdjFWucU.js"></script> </body></html>
